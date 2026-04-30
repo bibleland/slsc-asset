@@ -604,6 +604,32 @@
         .kpi-orange::before { background: linear-gradient(180deg,#E65100,#FB8C00); }
         .kpi-purple::before { background: linear-gradient(180deg,#7B1FA2,#AB47BC); }
         .kpi-green::before  { background: linear-gradient(180deg,#2E7D32,#66BB6A); }
+        .kpi-indigo::before { background: linear-gradient(180deg,#283593,#5C6BC0); }
+        .kpi-pink::before   { background: linear-gradient(180deg,#C2185B,#EC407A); }
+        .kpi-teal::before   { background: linear-gradient(180deg,#00695C,#26A69A); }
+        .kpi-amber::before  { background: linear-gradient(180deg,#FF8F00,#FFB300); }
+        /* KPI 그리드 — 4열 정렬 + 카드 높이 동일 */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+            align-items: stretch;
+        }
+        .kpi-grid > .kpi-card { min-height: 78px; }
+        @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 560px)  { .kpi-grid { grid-template-columns: 1fr; } }
+        /* 모듈 카드 그리드 — 4열 (KPI 그리드와 정렬 일치) → 2열 → 1열 */
+        .dash-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            align-items: stretch;
+        }
+        @media (max-width: 1280px) { .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 720px)  { .dash-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 720px)  { .dash-grid > [style*="grid-column"] { grid-column: span 1 !important; } }
+        @media (max-width: 1280px) { .dash-grid > [style*="grid-column"] { grid-column: span 2 !important; } }
         .kpi-icon {
             font-size: 2.2rem;
             line-height: 1;
@@ -819,6 +845,7 @@
             { key: 'camera',         label: '카메라관리' },
             { key: 'donatedCamera',  label: '흘러간 카메라' },
             { key: 'parsonage',      label: '사택지원' },
+            { key: 'realestate',     label: '부동산관리' },
             { key: 'dashboard',      label: '통계' }
         ];
 
@@ -928,7 +955,7 @@
             const isAdmin = currentUser.role === 'admin';
             const perms = String(currentUser.permissions || '').split(',').map(function(s){return s.trim();});
             // 탭 보이기/숨기기 (통계 포함 모든 탭 권한 체크)
-            ['current','donated','wishlist','vehicle','donatedVehicle','camera','donatedCamera','parsonage','dashboard'].forEach(function(key) {
+            ['current','donated','wishlist','vehicle','donatedVehicle','camera','donatedCamera','parsonage','realestate','dashboard'].forEach(function(key) {
                 const btn = document.querySelector('.tab[onclick*="switchTab(\'' + key + '\')"]');
                 if (!btn) return;
                 if (isAdmin || perms.indexOf(key) !== -1) {
@@ -995,7 +1022,7 @@
                 return;
             }
             // 권한 있는 첫 탭 찾기
-            const order = ['current','donated','wishlist','vehicle','donatedVehicle','camera','donatedCamera','parsonage','dashboard'];
+            const order = ['current','donated','wishlist','vehicle','donatedVehicle','camera','donatedCamera','parsonage','realestate','dashboard'];
             for (let i = 0; i < order.length; i++) {
                 if (hasPermission(order[i])) {
                     switchTab(order[i]);
@@ -1052,6 +1079,7 @@
             <button class="tab" onclick="switchTab('camera')">카메라관리</button>
             <button class="tab" onclick="switchTab('donatedCamera')">흘러간 카메라</button>
             <button class="tab" onclick="switchTab('parsonage')">사택지원</button>
+            <button class="tab" onclick="switchTab('realestate')">부동산관리</button>
             <button class="tab" onclick="switchTab('wishlist')">소원리스트</button>
             <button class="tab" onclick="switchTab('dashboard')">통계</button>
             <button class="tab" onclick="switchTab('users')" style="display:none;">회원관리</button>
@@ -1328,6 +1356,95 @@
             </div>
         </div>
 
+        <!-- 부동산관리 탭 -->
+        <div id="realestate-tab" class="tab-content" style="overflow-y:auto;">
+            <!-- 통계 카드 -->
+            <div style="background:#fff;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:140px;background:#F5F8FB;border-left:4px solid #1976D2;padding:10px 14px;border-radius:6px;">
+                        <div style="font-size:0.8rem;color:#666;margin-bottom:4px;">전체 자산</div>
+                        <div id="reCountTotal" style="font-size:1.4rem;font-weight:700;color:#1976D2;">0건</div>
+                    </div>
+                    <div style="flex:1;min-width:140px;background:#F1F8E9;border-left:4px solid #388E3C;padding:10px 14px;border-radius:6px;">
+                        <div style="font-size:0.8rem;color:#666;margin-bottom:4px;">관리중</div>
+                        <div id="reCountActive" style="font-size:1.4rem;font-weight:700;color:#388E3C;">0건</div>
+                    </div>
+                    <div style="flex:1;min-width:140px;background:#FFF3E0;border-left:4px solid #E65100;padding:10px 14px;border-radius:6px;">
+                        <div style="font-size:0.8rem;color:#666;margin-bottom:4px;">보증금 누계</div>
+                        <div id="reSumDeposit" style="font-size:1.4rem;font-weight:700;color:#E65100;">0만원</div>
+                    </div>
+                    <div style="flex:1;min-width:140px;background:#FCE4EC;border-left:4px solid #C2185B;padding:10px 14px;border-radius:6px;">
+                        <div style="font-size:0.8rem;color:#666;margin-bottom:4px;">월세 합계</div>
+                        <div id="reSumRent" style="font-size:1.4rem;font-weight:700;color:#C2185B;">0만원</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 학사관 섹션 -->
+            <div style="background:#fff;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#2E5C8A;font-weight:700;font-size:1.05rem;">학사관 현황 <span id="reCountHaksa" style="color:#888;font-size:0.85rem;font-weight:500;">(0건)</span></h3>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <input type="text" id="searchHaksa" class="search-box" placeholder="🔍 검색" oninput="renderRealestateTables()" style="max-width:180px;">
+                        <button class="btn btn-primary editor-only" onclick="openRealestateModal('학사관')">➕ 등록</button>
+                        <button class="btn btn-success" onclick="exportToExcel('realestate_haksa')">📥 엑셀</button>
+                    </div>
+                </div>
+                <div id="haksaTableContainer" style="overflow-x:auto;"></div>
+            </div>
+
+            <!-- 사랑의집 섹션 -->
+            <div style="background:#fff;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#2E5C8A;font-weight:700;font-size:1.05rem;">사랑의집 현황 <span id="reCountSarang" style="color:#888;font-size:0.85rem;font-weight:500;">(0건)</span></h3>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <input type="text" id="searchSarang" class="search-box" placeholder="🔍 검색" oninput="renderRealestateTables()" style="max-width:180px;">
+                        <button class="btn btn-primary editor-only" onclick="openRealestateModal('사랑의집')">➕ 등록</button>
+                        <button class="btn btn-success" onclick="exportToExcel('realestate_sarang')">📥 엑셀</button>
+                    </div>
+                </div>
+                <div id="sarangTableContainer" style="overflow-x:auto;"></div>
+            </div>
+
+            <!-- 소망의집 섹션 -->
+            <div style="background:#fff;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#2E5C8A;font-weight:700;font-size:1.05rem;">소망의집 현황 <span id="reCountSomang" style="color:#888;font-size:0.85rem;font-weight:500;">(0건)</span></h3>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <input type="text" id="searchSomang" class="search-box" placeholder="🔍 검색" oninput="renderRealestateTables()" style="max-width:180px;">
+                        <button class="btn btn-primary editor-only" onclick="openRealestateModal('소망의집')">➕ 등록</button>
+                        <button class="btn btn-success" onclick="exportToExcel('realestate_somang')">📥 엑셀</button>
+                    </div>
+                </div>
+                <div id="somangTableContainer" style="overflow-x:auto;"></div>
+            </div>
+
+            <!-- 월드하우스 섹션 -->
+            <div style="background:#fff;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#2E5C8A;font-weight:700;font-size:1.05rem;">월드하우스 현황 <span id="reCountWorld" style="color:#888;font-size:0.85rem;font-weight:500;">(0건)</span></h3>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <input type="text" id="searchWorld" class="search-box" placeholder="🔍 검색" oninput="renderRealestateTables()" style="max-width:180px;">
+                        <button class="btn btn-primary editor-only" onclick="openRealestateModal('월드하우스')">➕ 등록</button>
+                        <button class="btn btn-success" onclick="exportToExcel('realestate_world')">📥 엑셀</button>
+                    </div>
+                </div>
+                <div id="worldTableContainer" style="overflow-x:auto;"></div>
+            </div>
+
+            <!-- 관리제외 섹션 (하단) -->
+            <div style="background:#fff;border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-top:3px solid #999;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <h3 style="margin:0;color:#666;font-weight:700;font-size:1.05rem;">📦 관리제외 <span id="reCountExcluded" style="color:#888;font-size:0.85rem;font-weight:500;">(0건)</span></h3>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <input type="text" id="searchExcluded" class="search-box" placeholder="🔍 검색" oninput="renderRealestateTables()" style="max-width:180px;">
+                        <button class="btn btn-success" onclick="exportToExcel('realestate_excluded')">📥 엑셀</button>
+                    </div>
+                </div>
+                <div id="excludedTableContainer" style="overflow-x:auto;"></div>
+            </div>
+        </div>
+
         <!-- 통계 탭 -->
         <div id="dashboard-tab" class="tab-content" style="overflow-y:auto;background:#F5F7FA;">
 
@@ -1337,8 +1454,8 @@
                 <p style="margin:4px 0 0;color:#888;font-size:0.85rem;">서울광염교회 자산 현황 한눈에 보기</p>
             </div>
 
-            <!-- 상단 KPI: 모듈별 핵심 지표 4개 -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px;">
+            <!-- 상단 KPI: 모듈별 핵심 지표 4개 (자산·시설) -->
+            <div class="kpi-grid">
                 <div class="kpi-card kpi-blue">
                     <div class="kpi-icon">📦</div>
                     <div class="kpi-body">
@@ -1373,8 +1490,51 @@
                 </div>
             </div>
 
-            <!-- 모듈 섹션 그리드 -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;">
+            <!-- 부동산 KPI: 학사관·사랑·소망·월드 4종 -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 2px 8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:1.1rem;">🏘️</span>
+                    <span style="color:#1E3A5F;font-weight:700;font-size:1.0rem;">부동산 보유 현황</span>
+                </div>
+                <span style="color:#888;font-size:0.8rem;">학사관 · 사랑의집 · 소망의집 · 월드하우스</span>
+            </div>
+            <div class="kpi-grid">
+                <div class="kpi-card kpi-indigo">
+                    <div class="kpi-icon">🎓</div>
+                    <div class="kpi-body">
+                        <div class="kpi-label">학사관리기금</div>
+                        <div class="kpi-value" id="kpiHaksaFund">₩0</div>
+                        <div class="kpi-sub"><span id="kpiHaksaCount">0</span>호 · <span id="kpiHaksaPeople">0</span>명</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-pink">
+                    <div class="kpi-icon">❤️</div>
+                    <div class="kpi-body">
+                        <div class="kpi-label">사랑의집 보증금</div>
+                        <div class="kpi-value" id="kpiSarangFund">₩0</div>
+                        <div class="kpi-sub"><span id="kpiSarangCount">0</span>호 · <span id="kpiSarangPeople">0</span>명</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-teal">
+                    <div class="kpi-icon">🌟</div>
+                    <div class="kpi-body">
+                        <div class="kpi-label">소망의집 지원금</div>
+                        <div class="kpi-value" id="kpiSomangFund">₩0</div>
+                        <div class="kpi-sub"><span id="kpiSomangCount">0</span>호 · <span id="kpiSomangPeople">0</span>명</div>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-amber">
+                    <div class="kpi-icon">🌍</div>
+                    <div class="kpi-body">
+                        <div class="kpi-label">월드하우스 보증금</div>
+                        <div class="kpi-value" id="kpiWorldFund">₩0</div>
+                        <div class="kpi-sub"><span id="kpiWorldCount">0</span>호 · <span id="kpiWorldPeople">0</span>명</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 모듈 섹션 그리드 — 4열 정렬 (반응형) -->
+            <div class="dash-grid">
 
                 <!-- ① 비품관리 — 분류별 -->
                 <div class="dash-card">
@@ -1471,6 +1631,18 @@
                         <div style="font-size:2.2rem;font-weight:800;color:#F9A825;" id="totalWishlist">0</div>
                         <div style="color:#888;font-size:0.85rem;margin-top:4px;">건</div>
                     </div>
+                </div>
+
+                <!-- ⑦ 부동산 보유 현황 — 4종 비교 -->
+                <div class="dash-card" style="grid-column: span 2;">
+                    <div class="dash-card-header" style="border-left-color:#3F51B5;">
+                        <span class="dash-icon" style="background:#E8EAF6;color:#3F51B5;">🏘️</span>
+                        <div>
+                            <div class="dash-title">부동산 보유 현황</div>
+                            <div class="dash-subtitle">카테고리별 보증금·호수·인원 비교</div>
+                        </div>
+                    </div>
+                    <div id="realestateChart" style="padding:14px 16px;"></div>
                 </div>
 
             </div>
@@ -2095,6 +2267,151 @@
         </div>
     </div>
 
+    <!-- 부동산 등록/수정 모달 -->
+    <div id="realestateModal" class="modal">
+        <div class="modal-content" style="max-width:760px;">
+            <div class="modal-header">
+                <h2 id="realestateModalTitle">부동산 등록</h2>
+                <button class="close-btn" onclick="closeRealestateModal()">&times;</button>
+            </div>
+            <form id="realestateForm" novalidate>
+                <input type="hidden" id="realestateItemId">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>분류 *</label>
+                        <select id="reCategory" required>
+                            <option value="학사관">학사관</option>
+                            <option value="사랑의집">사랑의집</option>
+                            <option value="소망의집">소망의집</option>
+                            <option value="월드하우스">월드하우스</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>구분 (예: 학사관1, 사랑관6)</label>
+                        <input type="text" id="reName" placeholder="구분명">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>호수</label>
+                        <input type="text" id="reHosu" placeholder="예: 12호">
+                    </div>
+                    <div class="form-group">
+                        <label>입주자</label>
+                        <input type="text" id="reOccupant" placeholder="입주자 이름">
+                    </div>
+                    <div class="form-group">
+                        <label>인원수</label>
+                        <input type="number" id="rePeople" min="0">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>연락처</label>
+                        <input type="text" id="rePhone">
+                    </div>
+                    <div class="form-group">
+                        <label>헬퍼</label>
+                        <input type="text" id="reHelper">
+                    </div>
+                    <div class="form-group">
+                        <label>헬퍼 연락처</label>
+                        <input type="text" id="reHelperPhone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>주소</label>
+                    <input type="text" id="reAddress" placeholder="예: 노원구 중계동 27 1동 505호">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>거주형태</label>
+                        <input type="text" id="reHouseType" placeholder="예: 상가주택 4층">
+                    </div>
+                    <div class="form-group">
+                        <label>규모</label>
+                        <input type="text" id="reSize" placeholder="예: 방3, 거실, 주방, 욕실">
+                    </div>
+                    <div class="form-group">
+                        <label>면적(㎡)</label>
+                        <input type="text" id="reArea" placeholder="예: 72.45">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>전세금/보증금 (만원)</label>
+                        <input type="number" id="reDeposit" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>월세 (만원)</label>
+                        <input type="number" id="reRent" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>월세부담자</label>
+                        <input type="text" id="reRentPayer">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>입주일</label>
+                        <input type="date" id="reMoveInDate">
+                    </div>
+                    <div class="form-group">
+                        <label>전세권/확정일자</label>
+                        <input type="text" id="reLien" placeholder="예: 전세권 설정">
+                    </div>
+                    <div class="form-group">
+                        <label>상태</label>
+                        <select id="reStatus">
+                            <option value="거주중">거주중</option>
+                            <option value="졸업">졸업</option>
+                            <option value="관리종료">관리종료</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>집주인</label>
+                        <input type="text" id="reOwner">
+                    </div>
+                    <div class="form-group">
+                        <label>집주인 연락처</label>
+                        <input type="text" id="reOwnerPhone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>부동산</label>
+                    <input type="text" id="reAgency" placeholder="예: 동아공인중개사무소 02-979-0062">
+                </div>
+
+                <div class="form-group">
+                    <label>이력</label>
+                    <textarea id="reHistory" rows="4" placeholder="계약 이력 등"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>비고</label>
+                    <textarea id="reRemark" rows="2"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeRealestateModal()">취소</button>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // ============================================================
         // Google Sheets 연동 설정
@@ -2118,6 +2435,8 @@
         let editingParsonageType = 'support';
         let parsonageSupportSort = { field: null, dir: null };
         let parsonageTransSort = { field: null, dir: null };
+        let realestateItems = [];
+        let editingRealestateId = null;
         let editingItemId = null;
         let editingDonatedId = null;
         let editingDonatedVehicleId = null;
@@ -2522,6 +2841,93 @@
                 if (savedParsonage) parsonageItems = JSON.parse(savedParsonage);
             } catch (e) {}
 
+            try {
+                const savedRealestate = localStorage.getItem('churchInventoryRealestate');
+                if (savedRealestate) {
+                    realestateItems = JSON.parse(savedRealestate);
+                } else {
+                    // 학사관·사랑의집·소망의집·월드하우스 초기 데이터 (74건)
+                    realestateItems = [
+{id:1,category:"학사관",name:"학사관1",hosu:"",occupant:"여학사1 이윤영 김송은 안효림 원은혜",people:4,phone:"010-2285-4379",address:"노원구 중계동 27 1동 505호",houseType:"상가주택 4층",size:"방3, 주방, 거실, 욕실",helper:"",helperPhone:"",deposit:20000,rent:0,area:"72.45",moveInDate:"2021-10-08",rentPayer:"",owner:"나종민",ownerPhone:"010-3887-7525",lien:"전세권\n설정",agency:"쌍방합의",history:"*2003.2월 최초입주/4,000(20만)   *2005.5.25 도봉동이전/7,000만  *2007.5월 이전/7,000만 *2009.5월 이전/10,000만 *2011.7월 이전/ 11,000만                                *2015.6월 이전/ 14,000만  2010.10월 이전 / 20,000만",remark:"서울특별시 노원구 공릉로58길 121-1, 4층",status:"거주중"},
+{id:2,category:"학사관",name:"학사관2",hosu:"",occupant:"남학사1",people:0,phone:"010-2314-8313",address:"월계동 383-40 제라동 제5층 제501호",houseType:"빌라501호(5층)",size:"방3, 거실, 주방, 욕실",helper:"",helperPhone:"",deposit:16000,rent:0,area:"70.05",moveInDate:"2016-06-03",rentPayer:"",owner:"김현정",ownerPhone:"010-2314-8313",lien:"전세권\n설정",agency:"반석공인중개사무소   02-918-3600",history:"*2006.11월 최초입주/4,500만 *2008.10월 재계약/5,500만                      *2010.10월 이전/7,500만 *2014.5.30 이전/11,000만   *2016.6.3 이전/16,000만",remark:"서울특별시 노원구 월계동 383-40 성북맨션, 라동 501호 2026년 6월 2일 보증금반환예정",status:"거주중"},
+{id:3,category:"학사관",name:"학사관3",hosu:"",occupant:"여학사2 박하은 제채은 주다은",people:3,phone:"010-5421-0271",address:"노원구 중계동 94-8 3층",houseType:"상가주택 2층\n(5층 건물)",size:"방4,거실,주방,욕실",helper:"",helperPhone:"",deposit:20000,rent:0,area:"81.05",moveInDate:"2020-07-22",rentPayer:"",owner:"이민식",ownerPhone:"010-5578-3961",lien:"전세권\n설정",agency:"다준 공인중개사무소 \n010-7273-7524",history:"*2007.01월 최초입주/5,800만  *2007.04월 이전;한진빌라11,000만 *2009.06월 이전/9,250만 *2011.05.31 재계약(2년월세 230만원) *2013.06.01 재계약(2년월세 480만원)              *2015.07.22 이전/ 14,000만  *2020.07.22 이전 / 19,000만  *2022.7.23 재계약 / 20,000만",remark:"서울특별시 노원구 중계동 94-8 모짜르트피아노학원, 3층",status:"거주중"},
+{id:4,category:"학사관",name:"학사관4",hosu:"",occupant:"여학사3  양혜정 최은빈",people:2,phone:"010-3227-0139",address:"노원구 하계동 61-27 3층",houseType:"상가주택 3층 \n(4층 건물)",size:"방3, 거실, 주방, 욕실",helper:"",helperPhone:"",deposit:17000,rent:0,area:"86.25",moveInDate:"2015-04-21",rentPayer:"",owner:"나종민",ownerPhone:"010-3887-7525",lien:"전세권\n설정",agency:"석사공인중개사         02-995-4989",history:"*2010.03월 최초입주/8,500만                          *2015.04.21이전/ 13,000만  *2017.04.11재계약 /14,000만  *2021.04.16재계약 / 16,000만                         *2025.11.26재계약 / 17,000만",remark:"서울특별시 노원구 공릉로58길 121-1, 3층",status:"거주중"},
+{id:5,category:"학사관",name:"학사관5",hosu:"",occupant:"남학사2  장세혁 정민규 김동민 신홍균",people:4,phone:"010-5922-4107",address:"노원구 중계동 94-4 304호",houseType:"상가주택 304호 \n(3층 건물)",size:"방3, 거실, 주방, 욕실",helper:"",helperPhone:"",deposit:15000,rent:0,area:"80",moveInDate:"2015-08-12",rentPayer:"",owner:"김윤화",ownerPhone:"02-932-8886",lien:"전세권\n설정",agency:"나경공인중개사         02-932-8886",history:"*2015.08.23 최초입주/13,000만                       * 2025.04.08 재계약/ 15,000만",remark:"서울특별시 노원구 중계로16길 30, 304호",status:"거주중"},
+{id:6,category:"학사관",name:"신규 추가",hosu:"",occupant:"남학사3  이삭 살림 김정한 정성언 김효준",people:4,phone:"010-5953-2180",address:"노원구 중계동 94-4 304호",houseType:"신진빌라 5층",size:"방3, 거실, 주방, 욕실",helper:"",helperPhone:"",deposit:20000,rent:0,area:"32.4",moveInDate:"2003-12-01",rentPayer:"",owner:"안용대",ownerPhone:"010-3931-5346",lien:"전세권\n설정",agency:"미성공인중개사         02-974-7200",history:"",remark:"서울특별시 노원구 중계로16가길 21, 502호",status:"거주중"},
+{id:7,category:"사랑의집",name:"사랑관6",hosu:"12호",occupant:"김옥순",people:2,phone:"010-9359-6748",address:"도봉구 방학동 655-19  2층",houseType:"주택 1층(2층)",size:"2층 101호",helper:"",helperPhone:"",deposit:7000,rent:0,area:"31.21",moveInDate:"2023-04-14",rentPayer:"",owner:"백봉현",ownerPhone:"010-9359-6748",lien:"",agency:"한라부동산  02-954-2323",history:"*2003.12월 (9호)입주후 이전/*04.4.27.피터 입주후 04.10.01.이사/*2007.4월 이전/1,500만/*2009.4월 재계약/1,700만/*2011.4.27일 1년 연장/*2012.1.26 3년연장계약(4백만원수리) *2014.4.26 4500으로 인상후 이사 * 2023년 4월 14일 이사 완료  * 2025년 4월 10일 재계약 (교회지원 4500만원, 본인 2500만원)",remark:"",status:"거주중"},
+{id:8,category:"사랑의집",name:"사랑관7",hosu:"14호",occupant:"문임화",people:2,phone:"010-9091-0675",address:"도봉구 방학1동 655-20 (1층)",houseType:"다세대2층(  층)",size:"방2,거실,주방",helper:"",helperPhone:"",deposit:5000,rent:0,area:"33",moveInDate:"2008-10-30",rentPayer:"",owner:"이부웅",ownerPhone:"02-3492-3818",lien:"전세권\n설정",agency:"동경공인중개사 02-954-5888",history:"*2004.04월 최초입주/1,800만  *2006.10월 이전/3,500만 *2008.10월 이전/5,000만",remark:"",status:"거주중"},
+{id:9,category:"사랑의집",name:"사랑관23",hosu:"38호",occupant:"신동욱(서울역거리교회)",people:1,phone:"010-6307-5442",address:"서울시 용산구 서계동 33-244",houseType:"주택1층(1층)",size:"방2,주방,화장실",helper:"",helperPhone:"",deposit:7000,rent:0,area:"52.46",moveInDate:"2014-12-10",rentPayer:"",owner:"최금옥",ownerPhone:"010-7488-9800",lien:"전세권\n설정",agency:"힘찬공인부동산 02-3272-8585",history:"*2009.12월 최초입주/5,000만 *2011.12월 1,000만원인상재계약 * 인상1,000만원 자비부담 *2014.12.10 7,000에 이사(2천자부담)",remark:"",status:"거주중"},
+{id:10,category:"사랑의집",name:"사랑관28",hosu:"45호",occupant:"김성학",people:3,phone:"010-8337-4037",address:"도봉구 방학동 698-25 2층 201호",houseType:"다세대주택 2층 201호",size:"",helper:"",helperPhone:"",deposit:4000,rent:0,area:"39.61",moveInDate:"2013-12-19",rentPayer:"",owner:"조현삼",ownerPhone:"010-9577-1009",lien:"공동명의\n확정일자",agency:"허브공인중개사무소 02-956-1116",history:"*13.12.15 일 최초입주",remark:"",status:"거주중"},
+{id:11,category:"사랑의집",name:"사랑관35",hosu:"52호",occupant:"이철규찬양사",people:3,phone:"010-4277-1009(현광섭목사)",address:"서울시 노원구 한글비석로 97 노원 에너지제로주택 102-304",houseType:"",size:"",helper:"",helperPhone:"",deposit:6000,rent:0,area:"29.89",moveInDate:"2017-11-14",rentPayer:"",owner:"",ownerPhone:"노원구청",lien:"",agency:"",history:"*17.11.20 최초입주 보증금중 일부인 6천만원 지원",remark:"",status:"거주중"},
+{id:12,category:"사랑의집",name:"사랑관36",hosu:"54호",occupant:"노원희",people:2,phone:"010-6744-3410(임효준목사)",address:"서울시 노원구 중계동 103 동진아파트 2동 307호",houseType:"",size:"",helper:"",helperPhone:"",deposit:7500,rent:0,area:"41.85",moveInDate:"2018-04-30",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"쌍방합의",history:"*18.4.30. 5년계약 집주인 나신비(여석기)집사님 모친 *보증금중 1,500만원은 본인부담, 교회지원 6천만원",remark:"",status:"거주중"},
+{id:13,category:"사랑의집",name:"사랑관37",hosu:"55호",occupant:"곽다니엘",people:4,phone:"010-9577-1009",address:"서울시 노원구 하계동 213-32번지 3층",houseType:"",size:"",helper:"",helperPhone:"",deposit:14000,rent:0,area:"62.94",moveInDate:"2020-01-07",rentPayer:"",owner:"박종재",ownerPhone:"010-5447-1271",lien:"",agency:"동아공인중개사무소(한미수권사님)",history:"*20.1.7일 입주 *보증금중 6천만원은 목유사지정 및 지원, 소유는 곽다니엘에게 있음   /  2024년 2월 18일, 사랑의집 재계약을 완료하였습니다. 천만원 보증금 인상해서 재계약하고 교회에서 천만원 지원하였습니다. 집주인은 한성카공업사 사장인 타교회 장로님입니다. 총 금액은 1억 4천만원 전세로 상향조정됨",remark:"",status:"거주중"},
+{id:14,category:"사랑의집",name:"사랑관38",hosu:"56호",occupant:"한승수 이경숙",people:3,phone:"010-3297-1009 이인수목사",address:"서울시 노원구 중계동 103 동진아파트 2동 311호",houseType:"",size:"",helper:"",helperPhone:"",deposit:8000,rent:0,area:"41.85",moveInDate:"2020-09-14",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"쌍방합의",history:"전세보증금 8천만원 교회에서 지원, 집주인-여석기집사님",remark:"",status:"거주중"},
+{id:15,category:"사랑의집",name:"58호",hosu:"58호",occupant:"이민혜",people:1,phone:"010-6401-1210 \n최준 목사",address:"서울시 노원구 상계동 1386-3 \n301호",houseType:"010-5181-9177",size:"임대인 계좌 / 우리 1002-535-698568(김용애)",helper:"",helperPhone:"",deposit:5000,rent:15,area:"",moveInDate:"2025-05-24",rentPayer:"",owner:"김용애",ownerPhone:"010-8735-2621",lien:"",agency:"부동산랜드(상계동) 02-951-5100",history:"보증금 1천만원 본인부담 / 교회지원 4천만원  전월세-보증금 5천, 월세 30 2024년 4월 자동갱신으로 집주인과 합의함(월세 30만원 그대로)  2025년 5월 8일 당고개역 부근(직장근처) 새로운 집 계약 2025년 5월 8일 새로운 집 계약, 보증금 5천, 월세 15(보증금 천만원 본인부담, 교회지원 4천만원 동일) 2025년 5월 24일 이사",remark:"",status:"거주중"},
+{id:16,category:"사랑의집",name:"59호",hosu:"59호",occupant:"우크라이나 제이나 가족",people:3,phone:"",address:"인천 연수구 연수동 540 문남마을아파트 106동 506호",houseType:"",size:"임대인계좌 농협 천승환 \n204051-56-086162",helper:"",helperPhone:"",deposit:7000,rent:45,area:"",moveInDate:"2022-04-09",rentPayer:"",owner:"윤석범",ownerPhone:"010-8572-0374",lien:"",agency:"",history:"전월세-보증금 7천,월세 45-세입자 부담",remark:"",status:"거주중"},
+{id:17,category:"사랑의집",name:"61호",hosu:"61호",occupant:"고재철(고려원)",people:4,phone:"성백철 목사(010-2882-1009)",address:"서울시 노원구 공릉동 504-13 401호",houseType:"",size:"임대인계좌 국민 김순옥 073-21-0819-740",helper:"",helperPhone:"",deposit:5000,rent:0,area:"73.98",moveInDate:"2024-10-10",rentPayer:"",owner:"한재선",ownerPhone:"한재선 \n010-3114-7530",lien:"전세",agency:"이레공인중개사  02-971-2544",history:"사업에 어려움 당한 15남성도 가정, 살고 있던 집 정리, 집사남 가정에서 2000만원, 교회 2024 맥추감사절기구제부에서 3000만원, 자부담 2천만원, 총 5000만원 보증금으로 계약, 월세 100만원, 딸 고려원 명의 계약 진행, 2024년 10월 10일 이사 완료, 보증금 반환은 교회로 함, 진행 성백철 목사.",remark:"",status:"거주중"},
+{id:18,category:"사랑의집",name:"62호",hosu:"62호",occupant:"전진",people:1,phone:"최준 \n010-6401-1210",address:"서울시 양천구 신월동 924-3 \n204호",houseType:"",size:"",helper:"",helperPhone:"",deposit:3000,rent:0,area:"47.52",moveInDate:"",rentPayer:"",owner:"이정란",ownerPhone:"박사 부동산(박상율) \n010-7109-8247 \n02-2606-5588",lien:"월세",agency:"",history:"2025년 9월 8일 보증금 3000만원, 월세 50만원으로 계약함  이석진 목사님 이름으로 계약을 했고, 보증금 반환도 이석진 목사님이 받는 것으로 함.",remark:"",status:"거주중"},
+{id:19,category:"소망의집",name:"소망집1",hosu:"1",occupant:"박기선",people:1,phone:"",address:"도봉동",houseType:"다세대지하 2층",size:"",helper:"",helperPhone:"",deposit:413,rent:0,area:"",moveInDate:"2010-12-28",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2010.12.28 입주/4,132,700원  *",remark:"",status:"거주중"},
+{id:20,category:"소망의집",name:"소망집2",hosu:"2",occupant:"황옥란",people:3,phone:"010-9591-2199",address:"상계동",houseType:"다세대 3층",size:"방2, 주방, 욕실",helper:"",helperPhone:"",deposit:525,rent:0,area:"",moveInDate:"2010-12-30",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2010.12.30.입주 525만 * *",remark:"",status:"거주중"},
+{id:21,category:"소망의집",name:"소망집3서울역1",hosu:"3",occupant:"민정이네",people:3,phone:"",address:"",houseType:"다세대 1층(2층)",size:"",helper:"",helperPhone:"",deposit:0,rent:0,area:"",moveInDate:"2011-04-08",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"사랑의 집 20호에서 소망의집 3호로 이전 *2011.4.8 소망의집으로 이전",remark:"김용삼목사",status:"거주중"},
+{id:22,category:"소망의집",name:"소망집4서울역2",hosu:"4",occupant:"주연이네",people:4,phone:"",address:"",houseType:"",size:"",helper:"",helperPhone:"",deposit:0,rent:0,area:"",moveInDate:"",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"",remark:"",status:"거주중"},
+{id:23,category:"소망의집",name:"소망집5",hosu:"5",occupant:"우석진",people:4,phone:"010-4308-0512",address:"서울시 도봉구 도봉동 558-21 지하 1층",houseType:"주택지하1층",size:"",helper:"",helperPhone:"",deposit:800,rent:25,area:"177.8",moveInDate:"2011-07-30",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"사랑의집 40호에서 소망의 집 5호 이전 *2011.9.1. 소망의집으로이전",remark:"",status:"거주중"},
+{id:24,category:"소망의집",name:"소망집6",hosu:"6",occupant:"지영(조목사와함께 글13579참조)",people:4,phone:"",address:"서울시도봉구 창동",houseType:"",size:"",helper:"",helperPhone:"",deposit:400,rent:0,area:"",moveInDate:"2011-12-01",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"소망의집 6호로 2011년 성탄절헌금에서 마련함",remark:"",status:"거주중"},
+{id:25,category:"소망의집",name:"소망집7",hosu:"7",occupant:"유부매(49세) 자유게시판글 21141 참조",people:5,phone:"",address:"경기도 의정부",houseType:"",size:"",helper:"",helperPhone:"",deposit:300,rent:0,area:"",moveInDate:"2012-03-04",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"임대보증금 300만원 지원",remark:"",status:"거주중"},
+{id:26,category:"소망의집",name:"소망집8",hosu:"8",occupant:"김명희 사랑의집 15호-- 소망의집 8호로 이전",people:5,phone:"",address:"경기도 의정부",houseType:"",size:"",helper:"",helperPhone:"",deposit:500,rent:0,area:"",moveInDate:"",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"",remark:"",status:"거주중"},
+{id:27,category:"소망의집",name:"소망집9",hosu:"9",occupant:"김명희",people:2,phone:"010-2275-3910",address:"서울시 도봉구 도봉동 영구임대빌라",houseType:"",size:"",helper:"",helperPhone:"",deposit:1000,rent:0,area:"",moveInDate:"",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"",remark:"",status:"거주중"},
+{id:28,category:"소망의집",name:"소망집10",hosu:"10",occupant:"조재협",people:2,phone:"010-2133-839",address:"서울시 중랑구 망우동 35-25",houseType:"주택 지상1층",size:"",helper:"",helperPhone:"",deposit:500,rent:0,area:"",moveInDate:"2012-09-25",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2012.9.26 입주",remark:"",status:"거주중"},
+{id:29,category:"소망의집",name:"소망집11",hosu:"11",occupant:"이진강청년",people:4,phone:"010-2985-1564",address:"서울시 강북구 송중도 8-315 현대화이트빌 401호",houseType:"주택 지상1층",size:"",helper:"",helperPhone:"",deposit:1000,rent:0,area:"",moveInDate:"2013-07-22",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2013.7.22 입주",remark:"",status:"거주중"},
+{id:30,category:"소망의집",name:"소망집12",hosu:"12",occupant:"예림이네",people:4,phone:"010-3092-6250",address:"노원구 중계동 90-7 베델빌라 B 04호",houseType:"B 04호",size:"",helper:"",helperPhone:"",deposit:500,rent:30,area:"28.01",moveInDate:"2013-12-27",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2013.12.27 입주",remark:"",status:"거주중"},
+{id:31,category:"소망의집",name:"소망집13",hosu:"13",occupant:"서영이 지원이네",people:3,phone:"010-8684-8702",address:"노원구 하계동 284번지 한신아파트 1동 202호",houseType:"하계 한신 1동 202호",size:"",helper:"",helperPhone:"",deposit:500,rent:43,area:"11.91",moveInDate:"2013-12-24",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2013.12.27 입주 *2014.6 졸업-영구임대로 이사",remark:"영구임대로 이전졸업",status:"졸업"},
+{id:32,category:"소망의집",name:"소망집14",hosu:"14",occupant:"김석도 손창희",people:4,phone:"010-3764-8470",address:"수유동",houseType:"",size:"",helper:"",helperPhone:"",deposit:500,rent:0,area:"",moveInDate:"2015-01-15",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2015.1.15 지현도목사교구추천으로 지원함",remark:"교회지원 500만원",status:"거주중"},
+{id:33,category:"소망의집",name:"소망집15",hosu:"15",occupant:"GMS김미형선교사",people:3,phone:"",address:"",houseType:"",size:"",helper:"",helperPhone:"",deposit:500,rent:0,area:"",moveInDate:"2015-01-20",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"2015.1.20 조목사와함께-글번호15005 참조",remark:"",status:"거주중"},
+{id:34,category:"소망의집",name:"소망집16",hosu:"16",occupant:"",people:0,phone:"",address:"강원도 원주시 개운동",houseType:"",size:"",helper:"",helperPhone:"",deposit:450,rent:0,area:"",moveInDate:"2015-03-31",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"2015.03.31 조목사와함께 페이지번호 2430450 참조",remark:"교회지원 450",status:"거주중"},
+{id:35,category:"소망의집",name:"소망집17",hosu:"17",occupant:"김은지(가명-은하)",people:3,phone:"010-3198-7993",address:"의정부시 의정부동 413-40",houseType:"1층 방2칸",size:"",helper:"",helperPhone:"",deposit:325,rent:0,area:"",moveInDate:"2015-06-18",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2011.5.14일 입주 *2015.6월 소망의집으로 이전",remark:"영구임대로 입주",status:"거주중"},
+{id:36,category:"소망의집",name:"소망집18",hosu:"18",occupant:"김상호,이혜숙",people:2,phone:"011-9591-3367",address:"서울시 노원구 동일로 250길 17 상계은빛 3단지 309-304",houseType:"아파트3층(  층)",size:"방2,거실,주방,욕실",helper:"",helperPhone:"",deposit:1135,rent:0,area:"16.57",moveInDate:"2016-08-24",rentPayer:"영구임대",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2007.04월 최초입주/2,000만 *2009.04월 재계약/7,000만  (2,000만김상호 부담),2013.5.28 이사입주(2,500만부담) *2016.7.1 소망의집으로 이관함",remark:"영구임대",status:"거주중"},
+{id:37,category:"소망의집",name:"소망집19",hosu:"19",occupant:"안정호(이현희)",people:4,phone:"010-7611-1470(이현희)",address:"서울시 노원구 상계동 58-13외 4필지 2층 202호",houseType:"",size:"",helper:"",helperPhone:"",deposit:425,rent:0,area:"64.32",moveInDate:"",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"2016.7.16 입주",remark:"영구임대",status:"거주중"},
+{id:38,category:"소망의집",name:"소망집20",hosu:"20",occupant:"유향연(홍철진,통일지원부)",people:2,phone:"010-2028-5033",address:"도봉구 방학동 576-21 2층 우측",houseType:"다세대주택 2층 우축",size:"",helper:"",helperPhone:"",deposit:1000,rent:40,area:"40",moveInDate:"2014-03-15",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*14.03.15 일 최초입주 16.09.28 소망의집으로 전환 (조목사와함께 글 15528)",remark:"",status:"거주중"},
+{id:39,category:"소망의집",name:"소망집21",hosu:"21",occupant:"김평(15김지석)",people:2,phone:"010-4981-5659",address:"서울시 은평구 신사동 300-109",houseType:"1측 좌측호",size:"",helper:"",helperPhone:"",deposit:1000,rent:30,area:"119.67",moveInDate:"2010-12-29",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2011.1월 최초입주/1,000만(30) *2016.11.10 소망의집 21호로 이전",remark:"",status:"거주중"},
+{id:40,category:"소망의집",name:"소망집22",hosu:"22",occupant:"최소영(박주광)",people:1,phone:"010-7274-6511",address:"서울시 중랑구 중화 2동 329-58",houseType:"",size:"",helper:"",helperPhone:"",deposit:400,rent:15,area:"",moveInDate:"2017-05-12",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2017.05.12 소망의집 22호 입주",remark:"",status:"거주중"},
+{id:41,category:"소망의집",name:"소망집23",hosu:"23",occupant:"주영애",people:3,phone:"010-5597-7445",address:"도봉구 도봉로 169가길 30 제 A동 202호",houseType:"A동 202호",size:"",helper:"",helperPhone:"",deposit:1432,rent:20,area:"",moveInDate:"2017-05-28",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2017.05.28 사랑의집16호에서 소망의집 23호 보증금 1천만원지원하여 전환",remark:"",status:"거주중"},
+{id:42,category:"소망의집",name:"소망집24",hosu:"24",occupant:"김소희7",people:3,phone:"010-8120-1204",address:"노원구  덕릉로126라길 18-4 301호",houseType:"",size:"",helper:"",helperPhone:"",deposit:500,rent:30,area:"",moveInDate:"2017-09-29",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2017.09.29  시작",remark:"",status:"거주중"},
+{id:43,category:"소망의집",name:"사랑관31",hosu:"48호",occupant:"마연옥(16성백철)",people:3,phone:"010-5231-4723",address:"노원구 상계동 670 주공아파트 901-102",houseType:"1층 방2칸",size:"",helper:"",helperPhone:"",deposit:2500,rent:33,area:"45.9",moveInDate:"2014-11-16",rentPayer:"공동명의\n확정일자",owner:"",ownerPhone:"",lien:"",agency:"",history:"*14.11.14 일 최초입주(교회지원 1천만원/1,500만원 입주자부담) *2014.12월 1천만원 반환함, *2015.1.17 사랑의집으로 남기고 보증금 2,500만원은 마연옥집사의 개인것으로 함, 돈이 필요하여 다시 1천만원을 돌려드리고 교회에서 1천만원을 지원한 것으로 함",remark:"",status:"거주중"},
+{id:44,category:"소망의집",name:"사랑관22",hosu:"36호",occupant:"목유사 (김해숙)",people:3,phone:"010-8482-1592",address:"전남 광주시 남구 월산동 990-11",houseType:"주택1층(  층)",size:"",helper:"",helperPhone:"",deposit:3500,rent:0,area:"63.22",moveInDate:"2011-06-17",rentPayer:"확정일자",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2011.7월초 이전입주/ 3,500만 확정일자/교회지원 2,500",remark:"",status:"거주중"},
+{id:45,category:"소망의집",name:"사랑관1",hosu:"1호",occupant:"김혜숙",people:2,phone:"010-3425-7535",address:"노원구 상계동721 주공아파트 511-202",houseType:"연립 2층(2층)",size:"방2, 주방겸거실, 욕실",helper:"",helperPhone:"",deposit:1050,rent:0,area:"31.98",moveInDate:"2013-11-20",rentPayer:"전세권설정",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2001.1월 최초입주/1,050만 *2003.1월 이전/2,000만 *2006. 2월 이전/3,700만*12.06.재계약/5,000만;전세권증2010.11월이전/전세 5,000만 *13.11.20 이전 4500(20)전월세로이전  2018.9 소망의집 27호 졸업함 1,050만원지원",remark:"",status:"졸업"},
+{id:46,category:"소망의집",name:"사랑관19",hosu:"32호",occupant:"목회자 강대복목사님",people:3,phone:"",address:"서울시 성동구 용답동 70-2",houseType:"빌라 지층(  층)",size:"지층 방2",helper:"",helperPhone:"",deposit:1000,rent:0,area:"46.87",moveInDate:"2008-12-27",rentPayer:"전세권\n설정",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2008.12월 최초입주/3,000万  *2018.10월 소망의집으로 졸업 1000만원 지원함",remark:"",status:"졸업"},
+{id:47,category:"소망의집",name:"사랑관32",hosu:"49호",occupant:"안선희(10김치영)",people:1,phone:"010-8518-5024",address:"강북구수유동(인수동) 356-40 지층서쪽",houseType:"다세대주택지층서쪽",size:"",helper:"",helperPhone:"",deposit:300,rent:0,area:"",moveInDate:"2018-10-26",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*14.12.2 일 최초입주(교회지원 1천8백만원/2백만원 입주자부담) *2018.10.26 사랑의집 졸업 소망의집으로 이전",remark:"",status:"졸업"},
+{id:48,category:"소망의집",name:"소망집30",hosu:"30호",occupant:"이호원(박주광목사)",people:3,phone:"010-9059-9581",address:"경기도 남양주시 별내동 별사랑마을 2201-401",houseType:"",size:"",helper:"",helperPhone:"",deposit:866,rent:0,area:"23.4",moveInDate:"2018-10-28",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2018.10.26 소망의집으로 지정 지원",remark:"",status:"거주중"},
+{id:49,category:"소망의집",name:"사랑관30",hosu:"47호",occupant:"박흥기 홍문숙(10지현도)",people:4,phone:"010-5229-7750\n010-4246-3050",address:"경기도 남양주시 두물로 39번지 75 3층 2호",houseType:"다세대주택 2층 우축",size:"",helper:"",helperPhone:"",deposit:1000,rent:60,area:"69.31",moveInDate:"2014-09-12",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"201812 졸업-계약서는 우리명의로 있기에 보관하고 있음, 이사하게 되면 그때 계약해지하면서 돌려드리기로함, 1천만원지원함",remark:"보증금 4500",status:"졸업"},
+{id:50,category:"소망의집",name:"사랑관33",hosu:"50호",occupant:"오상현",people:2,phone:"010-5225-9531",address:"서울특별시 노원구 한글비석로48길 15 (상계동) 2층",houseType:"2층 1호 방2칸",size:"",helper:"",helperPhone:"",deposit:1000,rent:20,area:"39.98",moveInDate:"2015-01-24",rentPayer:"전세권설정",owner:"",ownerPhone:"",lien:"",agency:"",history:"*15.01.24 최초입주  *2017년부터 월세 20으로 인상  * 2019년 소망의집으로 이전",remark:"",status:"거주중"},
+{id:51,category:"소망의집",name:"소망집32",hosu:"32호",occupant:"김영숙1(강신욱목사)",people:4,phone:"010-5896-4772",address:"서울 마포구 월드컵북로47길 8 (상암월드컵아파트 1단지) 106동 403호",houseType:"",size:"",helper:"",helperPhone:"",deposit:1506,rent:0,area:"21평",moveInDate:"2019-05-26",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2019.5.26 소망의집으로 지정 지원  1506만원지원",remark:"",status:"거주중"},
+{id:52,category:"소망의집",name:"소망집33",hosu:"",occupant:"곽요셉",people:2,phone:"010-2204-3927",address:"서울시 서대문구 중가로 10길 82",houseType:"",size:"",helper:"",helperPhone:"",deposit:1575,rent:0,area:"10",moveInDate:"2019-06-28",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2019.07.21 소망의집으로 지정 지원 1300만원지원",remark:"",status:"거주중"},
+{id:53,category:"소망의집",name:"사랑관20",hosu:"33호",occupant:"이종열",people:3,phone:"010-9152-1311",address:"경기도 동두천시 행선로 112(생연동 두택공사 생연아파트) 9동 201호",houseType:"아파트 9층(  층)",size:"",helper:"",helperPhone:"",deposit:1000,rent:0,area:"46.9",moveInDate:"2019-08-30",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2008.12월 최초입주/3,000만 *2009.10월 이전/3,000만  *2019년 9월 29일 소망의집으로 이전",remark:"",status:"거주중"},
+{id:54,category:"소망의집",name:"사랑관34",hosu:"51호",occupant:"박근진",people:4,phone:"010-3433-1009(박현덕목사)",address:"서울시 동작구 사당동 202-7",houseType:"2층 방 전부",size:"",helper:"",helperPhone:"",deposit:1000,rent:0,area:"36.2",moveInDate:"2016-05-28",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*16.5.28 최초입주  *2020.5월 사랑의집 졸업, 소망의집 34호로 이전",remark:"",status:"졸업"},
+{id:55,category:"소망의집",name:"사랑관11",hosu:"18호",occupant:"홍은숙",people:2,phone:"010-9048-1559",address:"도봉구 도봉동 583-10 (202호)",houseType:"주택2층(  층)",size:"방2,거실겸주방,욕실",helper:"",helperPhone:"",deposit:1000,rent:0,area:"42.17",moveInDate:"2006-11-30",rentPayer:"전세권\n설정(3,500)",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2005.09.13 최초입주/500만(25만)(5백만원 집사님 재정) 2006.11.30 이전/3,500만 *2008.11월 자동연장*2011.11월 연장(인상1,500만) 5,000만 *2020.6 졸업 1천지원, 소망37호",remark:"",status:"졸업"},
+{id:56,category:"소망의집",name:"",hosu:"",occupant:"김진선",people:3,phone:"010-9500-5165",address:"서울시 도봉구 도당로2길 46-6",houseType:"201",size:"",helper:"",helperPhone:"",deposit:1000,rent:25,area:"36.2",moveInDate:"2020-07-13",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"",remark:"",status:"거주중"},
+{id:57,category:"소망의집",name:"사랑관3",hosu:"7호",occupant:"이영오",people:5,phone:"011-9997-3684",address:"노원구 공릉로 58가길 9",houseType:"빌라 2층(4층)",size:"방3, 거실, 주방, 화장실",helper:"",helperPhone:"",deposit:1693,rent:0,area:"35.79",moveInDate:"2015-02-01",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*03.5월 최초입주/300만 *04.3월 이전; 1500/30만(서성집) *06.6월 이전/4,000만 *08.6월 재계약/4,000만(월세15만)*10.6월 재계약/5,000만(월세20만)*15.1.16 영구임대전세보증금지원*17.6.11 2백만원상환/1493만원지원",remark:"",status:"거주중"},
+{id:58,category:"소망의집",name:"사랑관4",hosu:"9호",occupant:"문재남",people:5,phone:"",address:"도봉구 도봉1동 557-13호 수정B동 301호",houseType:"연립3층(  층)",size:"방3, 주방, 거실, 욕실",helper:"",helperPhone:"",deposit:2000,rent:0,area:"",moveInDate:"2009-05-22",rentPayer:"전세권\n설정",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2003.12월 최초입주/1,000만 *2004.4월 이전;1,000(20만)        *2006.5월 이전/3,500만 *2007.11월 이전/4,500만(자가) *2009.5월 7,000만중 교회지원 2500, *2021년 3월 11일 5백만원 비용이 되는대로 반환하고 오늘자로 사랑의집 졸업",remark:"",status:"졸업"},
+{id:59,category:"소망의집",name:"사랑관17",hosu:"30호",occupant:"주정자",people:3,phone:"010-2300-0169\n010-4525-1250",address:"도봉구 도봉1동 574-26 지층;국민임대주택",houseType:"임대지층(  층)",size:"방3,거실겸주방,욕실",helper:"",helperPhone:"",deposit:195,rent:1,area:"41.58",moveInDate:"2007-11-15",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2007.11월 최초입주/총500만 소요  *20210311 소망의집 41호로 졸업",remark:"",status:"졸업"},
+{id:60,category:"소망의집",name:"사랑관12",hosu:"19호",occupant:"이진",people:4,phone:"010-6362-5449",address:"도봉구 시루봉로 27가길 11-4",houseType:"",size:"",helper:"",helperPhone:"",deposit:726,rent:30,area:"",moveInDate:"2015-12-22",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2005.12월 최초입주/2,800만 *2009.12월 재계약/2,700만(20만) *2013.10월 이전/3,000만(30만) *2015.12 LH영구임대주택 이사(726만3천원/30만원)",remark:"",status:"거주중"},
+{id:61,category:"소망의집",name:"사랑관13",hosu:"22호",occupant:"김윤자",people:2,phone:"010-7141-3950",address:"도봉구 도봉로 177길 126 진주빌라 3-103",houseType:"빌라 1층(  층)",size:"방2,거실겸주방,욕실",helper:"",helperPhone:"",deposit:2050,rent:0,area:"38.47",moveInDate:"2006-05-05",rentPayer:"",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2006.5월 최초입주/450만원권사님, 교회지원 2050만원 *2008.5월 자동연장  2019년 김윤자권사님이 주택을 구입함 8천만원구입 4천 대출, 20210801 5백만원교회 반환 지원1550만원, 졸업",remark:"",status:"졸업"},
+{id:62,category:"소망의집",name:"사랑관15",hosu:"27호",occupant:"한금련",people:1,phone:"011-9788-9912",address:"도봉구 도봉동 282-334",houseType:"빌라2층(  층)",size:"방2,주방,욕실",helper:"",helperPhone:"",deposit:1000,rent:0,area:"32",moveInDate:"2011-11-05",rentPayer:"전세권\n설정",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2006.12월 최초입주/2,300만 *2011.10월 이전/인상(700만원)3,000만 *2022.04.28 사랑의집졸업",remark:"",status:"졸업"},
+{id:63,category:"소망의집",name:"소망집52",hosu:"52호",occupant:"MR GILL",people:1,phone:"임마누엘아문 목사 010-9774-1009",address:"강북구 한천로 162길 29",houseType:"옥탑방",size:"방2,주방,욕실",helper:"",helperPhone:"",deposit:300,rent:0,area:"32",moveInDate:"2023-01-10",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2023.01.10 최초입주  (보증금 300, 월세 25만원)",remark:"",status:"거주중"},
+{id:64,category:"소망의집",name:"소망집53",hosu:"53호",occupant:"미혼모자매 여진이",people:1,phone:"안요한(가명) 목사 010-9149-6639",address:"평내동 224-1 쥬움펠리스빌 301호",houseType:"",size:"",helper:"",helperPhone:"",deposit:500,rent:0,area:"20",moveInDate:"2023-11-18",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2023.11.08. 최초 입주일  (추후 이헌택 목사가 조사 예정), 보증금 500만원 교회 지원,   전체 보증금은 1억 2천만에 월세 20만원인데, 대출 이자와 월세까지 정부 지원이 나옵니다.",remark:"",status:"거주중"},
+{id:65,category:"소망의집",name:"소망집54",hosu:"54호",occupant:"박진희",people:1,phone:"박진희  010-9160-6527",address:"노원구 상계동 737 상계주공아파트 306동 1303호",houseType:"최준 목사 010-6401-1210",size:"주방, 욕실, 방1",helper:"",helperPhone:"",deposit:1000,rent:0,area:"32.39",moveInDate:"2023-04-10",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"*2023.4.10. 최초 입주일  보증금 1000만원, 월세 474,000원  최초 교회서 월세 10개월치 500만원 지원함(2023년 5월)  2025년 3월에 2년 재계약",remark:"",status:"거주중"},
+{id:66,category:"소망의집",name:"소망집55",hosu:"55호",occupant:"캐롤라인",people:1,phone:"",address:"도봉구 방학동 700-53",houseType:"임요한 목사 \n010-9774-1009",size:"주방, 욕실, 방1",helper:"",helperPhone:"",deposit:300,rent:0,area:"30",moveInDate:"",rentPayer:"월세",owner:"",ownerPhone:"",lien:"",agency:"",history:"임요한 목사 이름으로 계약함  300/30",remark:"",status:"거주중"},
+{id:67,category:"월드하우스",name:"월드하우스 1",hosu:"1호",occupant:"",people:0,phone:"010-6397-1009",address:"노원구 하계동284번지 하계동청구아파트 5동 109호",houseType:"하계청구 APT",size:"방3, 주방, 거실, 욕실",helper:"박여은",helperPhone:"010-4758-3911",deposit:40000,rent:0,area:"70.69",moveInDate:"2017-04-25",rentPayer:"",owner:"김미라",ownerPhone:"010-5402-7989",lien:"전세권\n설정",agency:"동아공인중개사무소 02-979-0062",history:"*2017.4 월드하우스 입주/ 31,000만원  *2019.4 자동 계약 연장  *2021.4 2년 재계약하며 9천만원 증액/4억원",remark:"",status:"거주중"},
+{id:68,category:"월드하우스",name:"월드하우스 2",hosu:"2호",occupant:"",people:0,phone:"010-6397-1009",address:"노원구 상계동 666번지\n1005동 503호",houseType:"상계주공 APT",size:"방2, 욕실, 주방",helper:"박여은",helperPhone:"010-4758-3911",deposit:20000,rent:0,area:"59.39",moveInDate:"2008-04-22",rentPayer:"",owner:"강성운",ownerPhone:"010-9908-1009",lien:"전세권설정",agency:"동아공인중개사무소 02-979-0062",history:"*2017.9 월드하우스 입주/ 20,000만 원",remark:"",status:"거주중"},
+{id:69,category:"월드하우스",name:"월드하우스 3",hosu:"3호",occupant:"",people:0,phone:"010-6397-1009",address:"노원구 하계동 하계동한신아파트 \n3동 916호",houseType:"하계하신 APT",size:"",helper:"박여은",helperPhone:"010-4758-3911",deposit:0,rent:0,area:"44.52",moveInDate:"2025-08-11",rentPayer:"",owner:"박진영",ownerPhone:"010-4216-7271",lien:"",agency:"동아공인중개사무소 02-979-0062",history:"*2025.8 월드하우스 입주",remark:"",status:"거주중"},
+{id:70,category:"월드하우스",name:"월드하우스 4",hosu:"4호",occupant:"",people:0,phone:"010-6397-1009",address:"노원구 하계동 하계동한신아파트 \n3동 812호",houseType:"하계하신 APT",size:"",helper:"박여은",helperPhone:"010-4758-3911",deposit:22000,rent:0,area:"44.52",moveInDate:"2019-12-01",rentPayer:"",owner:"류태진",ownerPhone:"010-6651-1009",lien:"",agency:"동아공인중개사무소 02-979-0062",history:"*2019.12 월드하우스 입주",remark:"",status:"거주중"},
+{id:71,category:"월드하우스",name:"월드하우스 5",hosu:"5호",occupant:"",people:0,phone:"010-9577-1009",address:"강원도 인제군 서화면 천도촌 1길 6",houseType:"인제군 연립",size:"",helper:"홍철진",helperPhone:"010-9577-1009",deposit:11500,rent:0,area:"84.94",moveInDate:"",rentPayer:"",owner:"이미녀",ownerPhone:"쌍방합의",lien:"",agency:"",history:"*2025.6 월드하우스 입주",remark:"",status:"거주중"},
+{id:72,category:"월드하우스",name:"월드하우스에서 사택으로 이전",hosu:"관리종료",occupant:"",people:0,phone:"아문",address:"노원구 중계동 주공아파트 204동 1003호",houseType:"중계주공 10단지",size:"",helper:"",helperPhone:"",deposit:13000,rent:0,area:"39.92",moveInDate:"2016-12-09",rentPayer:"",owner:"이돈원",ownerPhone:"010-3756-5795",lien:"전세권설정",agency:"동아공인중개사무소 02-979-0062",history:"*2016.12.9 게스트하우스 입주/ 1억3千萬  *월드하우스에서 사택으로 이전",remark:"",status:"관리종료"},
+{id:73,category:"월드하우스",name:"2019년 1월 20일 계약 종료",hosu:"관리종료",occupant:"",people:0,phone:"010-6397-1009",address:"노원구 하계동274번지 청솔아파트 708동1201호",houseType:"청솔 APT",size:"방2, 주방, 거실, 욕실",helper:"박혜정",helperPhone:"010-5217-3638",deposit:14000,rent:0,area:"39.92",moveInDate:"2011-00-20",rentPayer:"",owner:"김진희",ownerPhone:"010-9890-8039",lien:"전세권설정",agency:"부동산뉴스공인중개 02-951-7600",history:"*2011.1 게스트하우스 입주/7,500만 *2012.12 2,500만인상 재계약/1억 *추가로 1천만원 인상 총 1억1천만원.??? 2017년1월20일 1억4천만원 재계약/4천증액 2019년 1월20일부로 계약 종료로 마감",remark:"",status:"관리종료"},
+{id:74,category:"월드하우스",name:"월드하우스 3",hosu:"관리 \n종료",occupant:"",people:0,phone:"010-6397-1009",address:"노원구 하계동 하계동한신아파트 \n3동 1214호",houseType:"하계하신 APT",size:"",helper:"박여은",helperPhone:"010-4758-3911",deposit:0,rent:0,area:"44.52",moveInDate:"2018-06-01",rentPayer:"",owner:"최주희",ownerPhone:"010-7440-1009",lien:"",agency:"동아공인중개사무소 02-979-0062",history:"*2018.6 월드하우스 입주  *2025.8 최주희 전도사님 입주",remark:"",status:"관리종료"}
+                    ];
+                    // excluded 필드 기본값 false
+                    realestateItems.forEach(function(r){ if (r.excluded === undefined) r.excluded = false; });
+                }
+            } catch (e) { realestateItems = []; }
+
             if (savedCurrent) {
                 currentItems = JSON.parse(savedCurrent);
             } else {
@@ -2889,6 +3295,7 @@
             renderDonatedCameraTable();
             updateCameraDeptFilter();
             renderParsonage();
+            renderRealestateTables();
             updateDashboard();
         }
 
@@ -2907,6 +3314,7 @@
                 localStorage.setItem('churchInventoryCamera', JSON.stringify(cameraItems));
                 localStorage.setItem('churchInventoryDonatedCamera', JSON.stringify(donatedCameraItems));
                 localStorage.setItem('churchInventoryParsonage', JSON.stringify(parsonageItems));
+                localStorage.setItem('churchInventoryRealestate', JSON.stringify(realestateItems));
             } catch (e) {
                 // localStorage 용량 초과 시 — 오래된 캐시를 비우고 재시도
                 console.warn('localStorage 용량 초과, 캐시 정리 후 재시도:', e.message);
@@ -2920,6 +3328,7 @@
                     localStorage.setItem('churchInventoryCamera', JSON.stringify(cameraItems));
                 localStorage.setItem('churchInventoryDonatedCamera', JSON.stringify(donatedCameraItems));
                 localStorage.setItem('churchInventoryParsonage', JSON.stringify(parsonageItems));
+                localStorage.setItem('churchInventoryRealestate', JSON.stringify(realestateItems));
                 } catch (e2) {
                     // 그래도 안 되면 메모리에서만 작동 (Google Sheets 연동 시 데이터 안전)
                     console.warn('localStorage 저장 불가, 메모리 모드로 동작:', e2.message);
@@ -3025,6 +3434,7 @@
                 'camera': 'camera-tab',
                 'donatedCamera': 'donatedCamera-tab',
                 'parsonage': 'parsonage-tab',
+                'realestate': 'realestate-tab',
                 'wishlist': 'wishlist-tab',
                 'dashboard': 'dashboard-tab',
                 'users': 'users-tab'
@@ -3036,6 +3446,7 @@
             if (tab === 'camera' && typeof renderCameraTable === 'function') renderCameraTable();
             if (tab === 'donatedCamera' && typeof renderDonatedCameraTable === 'function') renderDonatedCameraTable();
             if (tab === 'parsonage' && typeof renderParsonage === 'function') renderParsonage();
+            if (tab === 'realestate' && typeof renderRealestateTable === 'function') renderRealestateTable();
         }
 
         // ============================================================
@@ -4518,6 +4929,63 @@
 
             // 소원리스트
             document.getElementById('totalWishlist').textContent = wishlistItems.length;
+
+            // 부동산 KPI — 학사관·사랑·소망·월드 (deposit은 만원 단위 → ×10000 = 원)
+            const reActive = (realestateItems || []).filter(r => !r.excluded);
+            function reStats(catFilter) {
+                const list = reActive.filter(catFilter);
+                const fund = list.reduce((s, r) => s + (Number(r.deposit) || 0), 0) * 10000;
+                const houses = list.length;
+                const people = list.reduce((s, r) => s + (Number(r.people) || 0), 0);
+                return { fund, houses, people };
+            }
+            const haksaS = reStats(r => r.category === '학사관');
+            const sarangS = reStats(r => r.category === '사랑의집');
+            const somangS = reStats(r => r.category === '소망의집');
+            const worldS = reStats(r => r.category === '월드하우스');
+            const setKpi = (idF, idC, idP, s) => {
+                const f = document.getElementById(idF); if (f) f.textContent = '₩' + s.fund.toLocaleString();
+                const c = document.getElementById(idC); if (c) c.textContent = s.houses;
+                const p = document.getElementById(idP); if (p) p.textContent = s.people;
+            };
+            setKpi('kpiHaksaFund', 'kpiHaksaCount', 'kpiHaksaPeople', haksaS);
+            setKpi('kpiSarangFund', 'kpiSarangCount', 'kpiSarangPeople', sarangS);
+            setKpi('kpiSomangFund', 'kpiSomangCount', 'kpiSomangPeople', somangS);
+            setKpi('kpiWorldFund', 'kpiWorldCount', 'kpiWorldPeople', worldS);
+
+            renderRealestateChart([haksaS, sarangS, somangS, worldS]);
+        }
+
+        // 부동산 4종 비교 차트 (보증금 누계 기준)
+        function renderRealestateChart(stats) {
+            const el = document.getElementById('realestateChart');
+            if (!el) return;
+            const items = [
+                { key: '학사관',     icon: '🎓', color: '#5C6BC0', stats: stats[0] },
+                { key: '사랑의집',   icon: '❤️', color: '#EC407A', stats: stats[1] },
+                { key: '소망의집',   icon: '🌟', color: '#26A69A', stats: stats[2] },
+                { key: '월드하우스', icon: '🌍', color: '#FFB300', stats: stats[3] }
+            ];
+            const max = Math.max(1, ...items.map(i => i.stats.fund));
+            let html = '<div style="display:grid;gap:12px;">';
+            items.forEach(it => {
+                const pct = (it.stats.fund / max) * 100;
+                html += '<div style="padding:12px 14px;background:#f8f9fa;border-radius:10px;">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+                    +   '<strong style="display:flex;align-items:center;gap:6px;">' + it.icon + ' ' + it.key + '</strong>'
+                    +   '<span style="color:#1E3A5F;font-weight:700;">₩' + it.stats.fund.toLocaleString() + '</span>'
+                    + '</div>'
+                    + '<div style="height:10px;background:#dee2e6;border-radius:5px;overflow:hidden;margin-bottom:6px;">'
+                    +   '<div style="width:' + pct + '%;height:100%;background:' + it.color + ';"></div>'
+                    + '</div>'
+                    + '<div style="display:flex;justify-content:space-between;color:#888;font-size:0.78rem;">'
+                    +   '<span>' + it.stats.houses + '호</span>'
+                    +   '<span>' + it.stats.people + '명</span>'
+                    + '</div>'
+                    + '</div>';
+            });
+            html += '</div>';
+            el.innerHTML = html;
         }
 
         // 차량 차종별 차트
@@ -4874,6 +5342,35 @@
                     const notes = (item.notes || '').toString().trim();
                     const combined = (reason && notes) ? `${reason} / ${notes}` : (reason || notes);
                     rows.push([formatDate(item.date),item.name,dir,Math.abs(amt),combined,Number(item.balance)||0].map(csvCell).join(','));
+                });
+            } else if (type && type.indexOf('realestate') === 0) {
+                // 부동산 카테고리별 + 관리제외 + 통합 내보내기
+                const categoryMap = {
+                    'realestate':         { label: '부동산통합', filter: r => true },
+                    'realestate_haksa':   { label: '학사관현황', filter: r => !r.excluded && r.category === '학사관' },
+                    'realestate_sarang':  { label: '사랑의집현황', filter: r => !r.excluded && r.category === '사랑의집' },
+                    'realestate_somang':  { label: '소망의집현황', filter: r => !r.excluded && r.category === '소망의집' },
+                    'realestate_world':   { label: '월드하우스현황', filter: r => !r.excluded && r.category === '월드하우스' },
+                    'realestate_excluded': { label: '관리제외부동산', filter: r => r.excluded }
+                };
+                const conf = categoryMap[type] || categoryMap['realestate'];
+                filename = conf.label + '.csv';
+                rows.push('분류,구분,호수,입주자,인원,연락처,주소,거주형태,규모,면적,헬퍼,헬퍼연락처,전세금(만원),월세(만원),입주일,월세부담자,집주인,집주인연락처,전세권,부동산,상태,관리제외,제외일,제외사유,이력,비고');
+                realestateItems.filter(conf.filter).forEach(item => {
+                    rows.push([
+                        item.category, item.name, item.hosu, item.occupant, item.people || 0,
+                        item.phone, item.address, item.houseType, item.size, item.area,
+                        item.helper, item.helperPhone,
+                        Number(item.deposit) || 0, Number(item.rent) || 0,
+                        formatDate(item.moveInDate), item.rentPayer,
+                        item.owner, item.ownerPhone, item.lien, item.agency,
+                        item.status || '거주중',
+                        item.excluded ? 'Y' : 'N',
+                        item.excludedDate || '',
+                        item.excludedReason || '',
+                        item.history || '',
+                        item.remark || ''
+                    ].map(csvCell).join(','));
                 });
             }
 
@@ -5368,6 +5865,260 @@
                 location.reload();
             }
         }
+
+        // ============================================================
+        // 부동산관리 (학사관·사랑의집·소망의집·월드하우스·관리제외)
+        // ============================================================
+        const REALESTATE_CATEGORIES = [
+            { key: '학사관',    containerId: 'haksaTableContainer',    countId: 'reCountHaksa',  searchId: 'searchHaksa' },
+            { key: '사랑의집',  containerId: 'sarangTableContainer',   countId: 'reCountSarang', searchId: 'searchSarang' },
+            { key: '소망의집',  containerId: 'somangTableContainer',   countId: 'reCountSomang', searchId: 'searchSomang' },
+            { key: '월드하우스', containerId: 'worldTableContainer',    countId: 'reCountWorld',  searchId: 'searchWorld' }
+        ];
+
+        function reFmtNum(n) {
+            const v = Number(n) || 0;
+            if (v === 0) return '-';
+            return v.toLocaleString();
+        }
+        function reEsc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderRealestateTables() {
+            // 통계 카드 갱신
+            const active = realestateItems.filter(r => !r.excluded);
+            const excluded = realestateItems.filter(r => r.excluded);
+            const sumDeposit = active.reduce((s, r) => s + (Number(r.deposit) || 0), 0);
+            const sumRent = active.reduce((s, r) => s + (Number(r.rent) || 0), 0);
+            const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+            setText('reCountTotal', realestateItems.length + '건');
+            setText('reCountActive', active.length + '건');
+            setText('reSumDeposit', sumDeposit.toLocaleString() + '만원');
+            setText('reSumRent', sumRent.toLocaleString() + '만원');
+
+            REALESTATE_CATEGORIES.forEach(c => renderRealestateSection(c));
+            renderExcludedSection();
+        }
+
+        function renderRealestateSection(cfg) {
+            const container = document.getElementById(cfg.containerId);
+            const countEl = document.getElementById(cfg.countId);
+            const searchEl = document.getElementById(cfg.searchId);
+            if (!container) return;
+            const q = (searchEl && searchEl.value || '').trim().toLowerCase();
+            let list = realestateItems.filter(r => !r.excluded && r.category === cfg.key);
+            if (q) {
+                list = list.filter(r =>
+                    [r.name, r.hosu, r.occupant, r.phone, r.address, r.helper, r.owner, r.ownerPhone, r.agency, r.history, r.remark]
+                        .some(v => String(v || '').toLowerCase().includes(q))
+                );
+            }
+            countEl.textContent = '(' + list.length + '건)';
+            if (!list.length) {
+                container.innerHTML = '<div style="padding:24px;text-align:center;color:#999;">등록된 ' + cfg.key + '이(가) 없습니다.</div>';
+                return;
+            }
+            let html = '<table><thead><tr>'
+                + '<th>구분</th><th>호수</th><th>입주자</th><th>인원</th><th>주소</th>'
+                + '<th style="text-align:right;">전세금(만원)</th><th style="text-align:right;">월세(만원)</th>'
+                + '<th>입주일</th><th>집주인</th><th>상태</th><th>작업</th>'
+                + '</tr></thead><tbody>';
+            list.forEach(r => {
+                html += '<tr>'
+                    + '<td>' + reEsc(r.name) + '</td>'
+                    + '<td>' + reEsc(r.hosu) + '</td>'
+                    + '<td>' + reEsc(r.occupant) + '</td>'
+                    + '<td style="text-align:center;">' + (Number(r.people) || '-') + '</td>'
+                    + '<td>' + reEsc(r.address) + '</td>'
+                    + '<td style="text-align:right;">' + reFmtNum(r.deposit) + '</td>'
+                    + '<td style="text-align:right;">' + reFmtNum(r.rent) + '</td>'
+                    + '<td>' + reEsc(r.moveInDate) + '</td>'
+                    + '<td>' + reEsc(r.owner) + '</td>'
+                    + '<td>' + reEsc(r.status || '거주중') + '</td>'
+                    + '<td>'
+                    +   '<div class="action-btns editor-only">'
+                    +     '<button class="btn btn-secondary btn-sm" onclick="editRealestateItem(' + r.id + ')">수정</button>'
+                    +     '<button class="btn btn-warning btn-sm" style="background:#FFB300;color:#fff;border:none;" onclick="excludeRealestateItem(' + r.id + ')">관리제외</button>'
+                    +     '<button class="btn btn-danger btn-sm" onclick="deleteRealestateItem(' + r.id + ')">삭제</button>'
+                    +   '</div>'
+                    + '</td>'
+                    + '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function renderExcludedSection() {
+            const container = document.getElementById('excludedTableContainer');
+            const countEl = document.getElementById('reCountExcluded');
+            const searchEl = document.getElementById('searchExcluded');
+            if (!container) return;
+            const q = (searchEl && searchEl.value || '').trim().toLowerCase();
+            let list = realestateItems.filter(r => r.excluded);
+            if (q) {
+                list = list.filter(r =>
+                    [r.category, r.name, r.hosu, r.occupant, r.phone, r.address, r.helper, r.owner, r.ownerPhone, r.agency, r.history, r.remark]
+                        .some(v => String(v || '').toLowerCase().includes(q))
+                );
+            }
+            countEl.textContent = '(' + list.length + '건)';
+            if (!list.length) {
+                container.innerHTML = '<div style="padding:24px;text-align:center;color:#999;">관리제외 항목이 없습니다.</div>';
+                return;
+            }
+            let html = '<table><thead><tr>'
+                + '<th>분류</th><th>구분</th><th>호수</th><th>입주자</th><th>주소</th>'
+                + '<th style="text-align:right;">전세금(만원)</th><th>입주일</th><th>제외일</th><th>제외사유</th><th>작업</th>'
+                + '</tr></thead><tbody>';
+            list.forEach(r => {
+                html += '<tr style="background:#FAFAFA;color:#666;">'
+                    + '<td>' + reEsc(r.category) + '</td>'
+                    + '<td>' + reEsc(r.name) + '</td>'
+                    + '<td>' + reEsc(r.hosu) + '</td>'
+                    + '<td>' + reEsc(r.occupant) + '</td>'
+                    + '<td>' + reEsc(r.address) + '</td>'
+                    + '<td style="text-align:right;">' + reFmtNum(r.deposit) + '</td>'
+                    + '<td>' + reEsc(r.moveInDate) + '</td>'
+                    + '<td>' + reEsc(r.excludedDate || '') + '</td>'
+                    + '<td>' + reEsc(r.excludedReason || '') + '</td>'
+                    + '<td>'
+                    +   '<div class="action-btns editor-only">'
+                    +     '<button class="btn btn-success btn-sm" onclick="restoreRealestateItem(' + r.id + ')">복원</button>'
+                    +     '<button class="btn btn-secondary btn-sm" onclick="editRealestateItem(' + r.id + ')">수정</button>'
+                    +     '<button class="btn btn-danger btn-sm" onclick="deleteRealestateItem(' + r.id + ')">삭제</button>'
+                    +   '</div>'
+                    + '</td>'
+                    + '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function openRealestateModal(presetCategory) {
+            editingRealestateId = null;
+            document.getElementById('realestateModalTitle').textContent = '부동산 등록';
+            document.getElementById('realestateForm').reset();
+            document.getElementById('realestateItemId').value = '';
+            if (presetCategory) {
+                const sel = document.getElementById('reCategory');
+                if (sel) sel.value = presetCategory;
+            }
+            document.getElementById('realestateModal').classList.add('active');
+        }
+
+        function closeRealestateModal() {
+            document.getElementById('realestateModal').classList.remove('active');
+        }
+
+        function editRealestateItem(id) {
+            const item = realestateItems.find(r => r.id === id);
+            if (!item) return;
+            editingRealestateId = id;
+            document.getElementById('realestateModalTitle').textContent = '부동산 수정';
+            document.getElementById('realestateItemId').value = id;
+            const setVal = (eid, v) => { const el = document.getElementById(eid); if (el) el.value = v == null ? '' : v; };
+            setVal('reCategory', item.category || '학사관');
+            setVal('reName', item.name);
+            setVal('reHosu', item.hosu);
+            setVal('reOccupant', item.occupant);
+            setVal('rePeople', item.people || '');
+            setVal('rePhone', item.phone);
+            setVal('reHelper', item.helper);
+            setVal('reHelperPhone', item.helperPhone);
+            setVal('reAddress', item.address);
+            setVal('reHouseType', item.houseType);
+            setVal('reSize', item.size);
+            setVal('reArea', item.area);
+            setVal('reDeposit', item.deposit || '');
+            setVal('reRent', item.rent || '');
+            setVal('reRentPayer', item.rentPayer);
+            setVal('reMoveInDate', item.moveInDate);
+            setVal('reLien', item.lien);
+            setVal('reStatus', item.status || '거주중');
+            setVal('reOwner', item.owner);
+            setVal('reOwnerPhone', item.ownerPhone);
+            setVal('reAgency', item.agency);
+            setVal('reHistory', item.history);
+            setVal('reRemark', item.remark);
+            document.getElementById('realestateModal').classList.add('active');
+        }
+
+        function excludeRealestateItem(id) {
+            const item = realestateItems.find(r => r.id === id);
+            if (!item) return;
+            const reason = prompt('관리제외 사유를 입력하세요 (선택사항):', '');
+            if (reason === null) return; // 취소
+            item.excluded = true;
+            item.excludedDate = new Date().toISOString().slice(0, 10);
+            item.excludedReason = reason || '';
+            saveData();
+            renderRealestateTables();
+        }
+
+        function restoreRealestateItem(id) {
+            const item = realestateItems.find(r => r.id === id);
+            if (!item) return;
+            if (!confirm('이 항목을 ' + (item.category || '관리') + '로 복원하시겠습니까?')) return;
+            item.excluded = false;
+            delete item.excludedDate;
+            delete item.excludedReason;
+            saveData();
+            renderRealestateTables();
+        }
+
+        function deleteRealestateItem(id) {
+            const item = realestateItems.find(r => r.id === id);
+            if (!item) return;
+            if (!confirm('정말 삭제하시겠습니까?\n(' + (item.category || '') + ' / ' + (item.name || '') + ' / ' + (item.occupant || '') + ')\n복구할 수 없습니다.')) return;
+            const idx = realestateItems.findIndex(r => r.id === id);
+            if (idx >= 0) realestateItems.splice(idx, 1);
+            saveData();
+            renderRealestateTables();
+        }
+
+        // 부동산 폼 submit 핸들러 — 다른 폼들과 동일하게 직접 등록 (DOMContentLoaded 의존 제거)
+        document.getElementById('realestateForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('realestateItemId').value;
+            const data = {
+                category: document.getElementById('reCategory').value,
+                name: document.getElementById('reName').value.trim(),
+                hosu: document.getElementById('reHosu').value.trim(),
+                occupant: document.getElementById('reOccupant').value.trim(),
+                people: parseInt(document.getElementById('rePeople').value) || 0,
+                phone: document.getElementById('rePhone').value.trim(),
+                helper: document.getElementById('reHelper').value.trim(),
+                helperPhone: document.getElementById('reHelperPhone').value.trim(),
+                address: document.getElementById('reAddress').value.trim(),
+                houseType: document.getElementById('reHouseType').value.trim(),
+                size: document.getElementById('reSize').value.trim(),
+                area: document.getElementById('reArea').value.trim(),
+                deposit: parseInt(document.getElementById('reDeposit').value) || 0,
+                rent: parseInt(document.getElementById('reRent').value) || 0,
+                rentPayer: document.getElementById('reRentPayer').value.trim(),
+                moveInDate: document.getElementById('reMoveInDate').value,
+                lien: document.getElementById('reLien').value.trim(),
+                status: document.getElementById('reStatus').value,
+                owner: document.getElementById('reOwner').value.trim(),
+                ownerPhone: document.getElementById('reOwnerPhone').value.trim(),
+                agency: document.getElementById('reAgency').value.trim(),
+                history: document.getElementById('reHistory').value,
+                remark: document.getElementById('reRemark').value
+            };
+            if (id) {
+                const item = realestateItems.find(r => r.id === parseInt(id));
+                if (item) Object.assign(item, data);
+            } else {
+                const newId = realestateItems.length ? Math.max.apply(null, realestateItems.map(r => r.id || 0)) + 1 : 1;
+                realestateItems.push(Object.assign({ id: newId, excluded: false }, data));
+            }
+            saveData();
+            renderRealestateTables();
+            closeRealestateModal();
+        });
 
         // 초기화
         (async () => { await loadData(); })();
