@@ -2852,6 +2852,7 @@
 
         // 비품번호가 비어 있는 항목에 호실 기반 자동 번호 부여 + 시트 반영
         async function fillMissingCodes() {
+            if (blockIfReadOnly()) return;
             const targets = currentItems.filter(it => !it.code || !String(it.code).trim());
             if (targets.length === 0) {
                 alert('비품번호가 비어 있는 항목이 없습니다.');
@@ -4118,6 +4119,7 @@
         
         // 모달 열기
         function openAddModal() {
+            if (blockIfReadOnly()) return;
             editingItemId = null;
             document.getElementById('modalTitle').textContent = '비품 등록';
             document.getElementById('itemForm').reset();
@@ -4134,6 +4136,7 @@
         
         // 비품 수정
         function editItem(id) {
+            if (blockIfReadOnly()) return;
             const item = currentItems.find(i => i.id === id);
             if (!item) return;
 
@@ -4209,6 +4212,7 @@
 
         // 흘러간 차량 영구 삭제
         async function deleteDonatedVehicleItem(id) {
+            if (blockIfReadOnly()) return;
             const item = donatedVehicleItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.plate || '차량'}'을(를) 흘러간 차량 목록에서 영구 삭제하시겠습니까?\n\n복구할 수 없습니다.`)) return;
@@ -4310,6 +4314,7 @@
         }
 
         function openCameraModal() {
+            if (blockIfReadOnly()) return;
             editingCameraId = null;
             document.getElementById('cameraModalTitle').textContent = '카메라 등록';
             document.getElementById('cameraForm').reset();
@@ -4322,6 +4327,7 @@
         }
 
         function editCameraItem(id) {
+            if (blockIfReadOnly()) return;
             const item = cameraItems.find(i => i.id === id);
             if (!item) return;
             editingCameraId = id;
@@ -4342,6 +4348,7 @@
 
         // 카메라 삭제 → 흘러간 카메라 목록으로 이동 (이력 보존)
         async function deleteCameraItem(id) {
+            if (blockIfReadOnly()) return;
             const item = cameraItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.model || '항목'}'을(를) 삭제하시겠습니까?\n\n흘러간 카메라 목록으로 이동되어 이력이 남습니다.`)) return;
@@ -4502,6 +4509,7 @@
         });
 
         async function deleteDonatedCameraItem(id) {
+            if (blockIfReadOnly()) return;
             const item = donatedCameraItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.model || '항목'}'을(를) 흘러간 카메라 목록에서 영구 삭제하시겠습니까?\n복구할 수 없습니다.`)) return;
@@ -4512,6 +4520,7 @@
         }
 
         async function restoreDonatedCameraItem(id) {
+            if (blockIfReadOnly()) return;
             const item = donatedCameraItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.model || '항목'}'을(를) 카메라관리 목록으로 복원하시겠습니까?`)) return;
@@ -4599,6 +4608,7 @@
         // 사택지원 (현황 + 변동내역 한 시트 통합)
         // ============================================================
         function openParsonageModal(type) {
+            if (blockIfReadOnly()) return;
             editingParsonageId = null;
             editingParsonageType = type;
             document.getElementById('parsonageItemId').value = '';
@@ -4674,6 +4684,7 @@
         }
 
         function editParsonageItem(id) {
+            if (blockIfReadOnly()) return;
             const item = parsonageItems.find(i => i.id === id);
             if (!item) return;
             editingParsonageId = id;
@@ -4713,6 +4724,7 @@
         }
 
         async function deleteParsonageItem(id) {
+            if (blockIfReadOnly()) return;
             const item = parsonageItems.find(i => i.id === id);
             if (!item) return;
             const label = item.recordType === 'support' ? `${item.name || '항목'}의 지원 정보` : `${item.name} ${formatDate(item.date)} 지원/반환 내역`;
@@ -5079,6 +5091,7 @@
 
         // 흘려보낸 비품을 비품관리 목록으로 복원
         async function restoreDonatedItem(id) {
+            if (blockIfReadOnly()) return;
             const item = donatedItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.name || '항목'}'을(를) 비품관리 목록으로 복원하시겠습니까?`)) return;
@@ -5108,6 +5121,7 @@
 
         // 흘러간 차량을 차량관리 목록으로 복원
         async function restoreDonatedVehicleItem(id) {
+            if (blockIfReadOnly()) return;
             const item = donatedVehicleItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.plate || '차량'}'을(를) 차량관리 목록으로 복원하시겠습니까?`)) return;
@@ -5135,6 +5149,7 @@
 
         // 비품 삭제 → 흘려보낸 비품 목록으로 이동 (삭제 이력 보존)
         async function deleteItem(id) {
+            if (blockIfReadOnly()) return;
             const item = currentItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.name || '항목'}'을(를) 삭제하시겠습니까?\n\n흘려보낸 비품 목록으로 이동되어 이력이 남습니다.`)) return;
@@ -5172,6 +5187,7 @@
         
         // 기증 모달 열기 (신규 흘려보내기 모드)
         function openDonateModal(id) {
+            if (blockIfReadOnly()) return;
             editingDonatedId = null;
             document.querySelector('#donateModal .modal-header h2').textContent = '비품 흘려보내기';
             document.querySelector('#donateForm button[type="submit"]').textContent = '흘려보내기';
@@ -5674,6 +5690,7 @@
 
         // 소원리스트 모달 열기
         function openWishlistModal() {
+            if (blockIfReadOnly()) return;
             editingWishlistId = null;
             document.getElementById('wishlistModalTitle').textContent = '소원 등록';
             document.getElementById('wishlistForm').reset();
@@ -5690,6 +5707,7 @@
 
         // 소원리스트 수정
         function editWishlistItem(id) {
+            if (blockIfReadOnly()) return;
             const item = wishlistItems.find(i => i.id === id);
             if (!item) return;
 
@@ -5707,6 +5725,7 @@
 
         // 소원리스트 삭제
         function deleteWishlistItem(id) {
+            if (blockIfReadOnly()) return;
             if (confirm('이 소원을 삭제하시겠습니까?')) {
                 wishlistItems = wishlistItems.filter(i => i.id !== id);
                 saveData();
@@ -6002,6 +6021,7 @@
         }
 
         function openVehicleModal() {
+            if (blockIfReadOnly()) return;
             editingVehicleId = null;
             document.getElementById('vehicleModalTitle').textContent = '차량 등록';
             document.getElementById('vehicleForm').reset();
@@ -6015,6 +6035,7 @@
         }
 
         function editVehicleItem(id) {
+            if (blockIfReadOnly()) return;
             const item = vehicleItems.find(i => i.id === id);
             if (!item) return;
 
@@ -6037,6 +6058,7 @@
 
         // 차량 삭제 → 흘러간 차량 목록으로 이동 (이력 보존)
         async function deleteVehicleItem(id) {
+            if (blockIfReadOnly()) return;
             const item = vehicleItems.find(i => i.id === id);
             if (!item) return;
             if (!confirm(`'${item.plate || '차량'}'을(를) 삭제하시겠습니까?\n\n흘러간 차량 목록으로 이동되어 이력이 남습니다.`)) return;
@@ -6313,6 +6335,7 @@
 
         // ===== 일괄 호실 변경 기능 =====
         function toggleBulkEditMode() {
+            if (blockIfReadOnly()) return;
             bulkEditMode = !bulkEditMode;
             const bar = document.getElementById('bulkEditBar');
             const btn = document.getElementById('bulkEditToggle');
@@ -6863,6 +6886,7 @@
         }
 
         function openRealestateModal(presetCategory) {
+            if (blockIfReadOnly()) return;
             editingRealestateId = null;
             document.getElementById('realestateModalTitle').textContent = '부동산 등록';
             document.getElementById('realestateForm').reset();
@@ -6879,6 +6903,7 @@
         }
 
         function editRealestateItem(id) {
+            if (blockIfReadOnly()) return;
             const item = realestateItems.find(r => r.id === id);
             if (!item) return;
             editingRealestateId = id;
@@ -6912,6 +6937,7 @@
         }
 
         function excludeRealestateItem(id) {
+            if (blockIfReadOnly()) return;
             const item = realestateItems.find(r => r.id === id);
             if (!item) return;
             const isSarangSomang = (item.category === '사랑의집' || item.category === '소망의집');
@@ -6943,6 +6969,7 @@
         }
 
         function restoreRealestateItem(id) {
+            if (blockIfReadOnly()) return;
             const item = realestateItems.find(r => r.id === id);
             if (!item) return;
             if (item.category === '사랑의집졸업') {
@@ -7039,6 +7066,7 @@
         }
 
         function deleteRealestateItem(id) {
+            if (blockIfReadOnly()) return;
             const item = realestateItems.find(r => r.id === id);
             if (!item) return;
             if (!confirm('정말 삭제하시겠습니까?\n(' + (item.category || '') + ' / ' + (item.name || '') + ' / ' + (item.occupant || '') + ')\n복구할 수 없습니다.')) return;
