@@ -1736,19 +1736,32 @@
                 </div>
             </div>
 
-            <!-- 부동산 KPI: 학사관·사랑·소망·월드 4종 -->
+            <!-- 부동산 관리금액 -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 2px 8px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="font-size:1.1rem;">🏘️</span>
-                    <span style="color:#1E3A5F;font-weight:700;font-size:1.0rem;">부동산 보유 현황</span>
+                    <span style="color:#1E3A5F;font-weight:700;font-size:1.0rem;">부동산 관리금액</span>
                 </div>
                 <span style="color:#888;font-size:0.8rem;">학사관 · 사랑의집 · 사역자지원 · 소망의집 · 사랑의집졸업 · 월드하우스</span>
             </div>
+
+            <!-- 총 관리금액 카드 -->
+            <div style="background:linear-gradient(135deg,#1E3A5F,#2E5C8A);color:#fff;border-radius:12px;padding:16px 22px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                <div>
+                    <div style="font-size:0.85rem;opacity:0.85;margin-bottom:4px;">부동산 총 관리금액</div>
+                    <div id="kpiRealestateTotalFund" style="font-size:1.8rem;font-weight:700;letter-spacing:-0.5px;">₩0</div>
+                </div>
+                <div style="text-align:right;font-size:0.85rem;opacity:0.9;">
+                    <div>관리 호수 <strong id="kpiRealestateTotalCount" style="font-size:1.1rem;">0</strong>호</div>
+                    <div style="margin-top:2px;">관리 인원 <strong id="kpiRealestateTotalPeople" style="font-size:1.1rem;">0</strong>명</div>
+                </div>
+            </div>
+
             <div class="kpi-grid">
                 <div class="kpi-card kpi-indigo">
                     <div class="kpi-icon">🎓</div>
                     <div class="kpi-body">
-                        <div class="kpi-label">학사관리기금</div>
+                        <div class="kpi-label">학사관 관리금액</div>
                         <div class="kpi-value" id="kpiHaksaFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiHaksaCount">0</span>호 · <span id="kpiHaksaPeople">0</span>명</div>
                     </div>
@@ -1756,7 +1769,7 @@
                 <div class="kpi-card kpi-pink">
                     <div class="kpi-icon">❤️</div>
                     <div class="kpi-body">
-                        <div class="kpi-label">사랑의집 보증금</div>
+                        <div class="kpi-label">사랑의집 관리금액</div>
                         <div class="kpi-value" id="kpiSarangFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiSarangCount">0</span>호 · <span id="kpiSarangPeople">0</span>명</div>
                     </div>
@@ -1764,7 +1777,7 @@
                 <div class="kpi-card" style="background:linear-gradient(135deg,#EDE7F6,#D1C4E9);color:#4A148C;">
                     <div class="kpi-icon">📌</div>
                     <div class="kpi-body">
-                        <div class="kpi-label">사역자지원 보증금</div>
+                        <div class="kpi-label">사역자지원 관리금액</div>
                         <div class="kpi-value" id="kpiPastorFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiPastorCount">0</span>호 · <span id="kpiPastorPeople">0</span>명</div>
                     </div>
@@ -1772,7 +1785,7 @@
                 <div class="kpi-card kpi-teal">
                     <div class="kpi-icon">🌟</div>
                     <div class="kpi-body">
-                        <div class="kpi-label">소망의집 지원금</div>
+                        <div class="kpi-label">소망의집 관리금액</div>
                         <div class="kpi-value" id="kpiSomangFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiSomangCount">0</span>호 · <span id="kpiSomangPeople">0</span>명</div>
                     </div>
@@ -1780,7 +1793,7 @@
                 <div class="kpi-card" style="background:linear-gradient(135deg,#E3F2FD,#90CAF9);color:#0D47A1;">
                     <div class="kpi-icon">🎓</div>
                     <div class="kpi-body">
-                        <div class="kpi-label">사랑의집졸업 지원금</div>
+                        <div class="kpi-label">사랑의집졸업 관리금액</div>
                         <div class="kpi-value" id="kpiGradFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiGradCount">0</span>호 · <span id="kpiGradPeople">0</span>명</div>
                     </div>
@@ -1788,7 +1801,7 @@
                 <div class="kpi-card kpi-amber">
                     <div class="kpi-icon">🌍</div>
                     <div class="kpi-body">
-                        <div class="kpi-label">월드하우스 보증금</div>
+                        <div class="kpi-label">월드하우스 관리금액</div>
                         <div class="kpi-value" id="kpiWorldFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiWorldCount">0</span>호 · <span id="kpiWorldPeople">0</span>명</div>
                     </div>
@@ -5427,6 +5440,18 @@
             setKpi('kpiSomangFund', 'kpiSomangCount', 'kpiSomangPeople', somangS);
             setKpi('kpiGradFund',   'kpiGradCount',   'kpiGradPeople',   gradS);
             setKpi('kpiWorldFund',  'kpiWorldCount',  'kpiWorldPeople',  worldS);
+
+            // 부동산 총 관리금액 (6종 합계)
+            const totalAll = [haksaS, sarangS, pastorS, somangS, gradS, worldS].reduce(
+                (acc, s) => ({ fund: acc.fund + s.fund, houses: acc.houses + s.houses, people: acc.people + s.people }),
+                { fund: 0, houses: 0, people: 0 }
+            );
+            const totalFundEl = document.getElementById('kpiRealestateTotalFund');
+            if (totalFundEl) totalFundEl.textContent = '₩' + totalAll.fund.toLocaleString();
+            const totalCountEl = document.getElementById('kpiRealestateTotalCount');
+            if (totalCountEl) totalCountEl.textContent = totalAll.houses;
+            const totalPeopleEl = document.getElementById('kpiRealestateTotalPeople');
+            if (totalPeopleEl) totalPeopleEl.textContent = totalAll.people;
 
             renderRealestateChart([haksaS, sarangS, pastorS, somangS, gradS, worldS]);
         }
