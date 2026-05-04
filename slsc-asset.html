@@ -1742,7 +1742,7 @@
                     <span style="font-size:1.1rem;">🏘️</span>
                     <span style="color:#1E3A5F;font-weight:700;font-size:1.0rem;">부동산 보유 현황</span>
                 </div>
-                <span style="color:#888;font-size:0.8rem;">학사관 · 사랑의집 · 소망의집 · 월드하우스</span>
+                <span style="color:#888;font-size:0.8rem;">학사관 · 사랑의집 · 사역자지원 · 소망의집 · 사랑의집졸업 · 월드하우스</span>
             </div>
             <div class="kpi-grid">
                 <div class="kpi-card kpi-indigo">
@@ -1761,12 +1761,28 @@
                         <div class="kpi-sub"><span id="kpiSarangCount">0</span>호 · <span id="kpiSarangPeople">0</span>명</div>
                     </div>
                 </div>
+                <div class="kpi-card" style="background:linear-gradient(135deg,#EDE7F6,#D1C4E9);color:#4A148C;">
+                    <div class="kpi-icon">📌</div>
+                    <div class="kpi-body">
+                        <div class="kpi-label">사역자지원 보증금</div>
+                        <div class="kpi-value" id="kpiPastorFund">₩0</div>
+                        <div class="kpi-sub"><span id="kpiPastorCount">0</span>호 · <span id="kpiPastorPeople">0</span>명</div>
+                    </div>
+                </div>
                 <div class="kpi-card kpi-teal">
                     <div class="kpi-icon">🌟</div>
                     <div class="kpi-body">
                         <div class="kpi-label">소망의집 지원금</div>
                         <div class="kpi-value" id="kpiSomangFund">₩0</div>
                         <div class="kpi-sub"><span id="kpiSomangCount">0</span>호 · <span id="kpiSomangPeople">0</span>명</div>
+                    </div>
+                </div>
+                <div class="kpi-card" style="background:linear-gradient(135deg,#E3F2FD,#90CAF9);color:#0D47A1;">
+                    <div class="kpi-icon">🎓</div>
+                    <div class="kpi-body">
+                        <div class="kpi-label">사랑의집졸업 지원금</div>
+                        <div class="kpi-value" id="kpiGradFund">₩0</div>
+                        <div class="kpi-sub"><span id="kpiGradCount">0</span>호 · <span id="kpiGradPeople">0</span>명</div>
                     </div>
                 </div>
                 <div class="kpi-card kpi-amber">
@@ -5367,10 +5383,10 @@
             document.getElementById('kpiDonatedCamera').textContent = donatedCameraItems.length;
             renderCameraTypeChart();
 
-            // 사택지원 통계
-            const supports = parsonageItems.filter(i => i.recordType === 'support');
+            // 사택지원 통계 — 별건관리(이석진) 제외
+            const supports = parsonageItems.filter(i => i.recordType === 'support' && !isParsonageSpecial(i));
             const supportSum = supports.reduce((s, i) => s + (Number(i.churchSupport) || 0), 0);
-            const transAll = parsonageItems.filter(i => i.recordType === 'transaction');
+            const transAll = parsonageItems.filter(i => i.recordType === 'transaction' && !isParsonageSpecial(i));
             transAll.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
             const lastBalance = transAll.length ? (Number(transAll[0].balance) || 0) : 0;
             const fundTotal = supportSum + lastBalance;
@@ -5384,7 +5400,7 @@
             // 소원리스트
             document.getElementById('totalWishlist').textContent = wishlistItems.length;
 
-            // 부동산 KPI — 학사관·사랑·소망·월드 (deposit은 만원 단위 → ×10000 = 원)
+            // 부동산 KPI — 학사관·사랑·사역자지원·소망·졸업·월드 (deposit은 만원 단위 → ×10000 = 원)
             const reActive = (realestateItems || []).filter(r => !r.excluded);
             function reStats(catFilter) {
                 const list = reActive.filter(catFilter);
@@ -5393,21 +5409,26 @@
                 const people = list.reduce((s, r) => s + (Number(r.people) || 0), 0);
                 return { fund, houses, people };
             }
-            const haksaS = reStats(r => r.category === '학사관');
-            const sarangS = reStats(r => r.category === '사랑의집');
+            const haksaS  = reStats(r => r.category === '학사관');
+            // 사랑의집은 사역자지원 제외
+            const sarangS = reStats(r => r.category === '사랑의집' && !isSarangPastor(r));
+            const pastorS = reStats(r => r.category === '사랑의집' && isSarangPastor(r));
             const somangS = reStats(r => r.category === '소망의집');
-            const worldS = reStats(r => r.category === '월드하우스');
+            const gradS   = reStats(r => r.category === '사랑의집졸업');
+            const worldS  = reStats(r => r.category === '월드하우스');
             const setKpi = (idF, idC, idP, s) => {
                 const f = document.getElementById(idF); if (f) f.textContent = '₩' + s.fund.toLocaleString();
                 const c = document.getElementById(idC); if (c) c.textContent = s.houses;
                 const p = document.getElementById(idP); if (p) p.textContent = s.people;
             };
-            setKpi('kpiHaksaFund', 'kpiHaksaCount', 'kpiHaksaPeople', haksaS);
+            setKpi('kpiHaksaFund',  'kpiHaksaCount',  'kpiHaksaPeople',  haksaS);
             setKpi('kpiSarangFund', 'kpiSarangCount', 'kpiSarangPeople', sarangS);
+            setKpi('kpiPastorFund', 'kpiPastorCount', 'kpiPastorPeople', pastorS);
             setKpi('kpiSomangFund', 'kpiSomangCount', 'kpiSomangPeople', somangS);
-            setKpi('kpiWorldFund', 'kpiWorldCount', 'kpiWorldPeople', worldS);
+            setKpi('kpiGradFund',   'kpiGradCount',   'kpiGradPeople',   gradS);
+            setKpi('kpiWorldFund',  'kpiWorldCount',  'kpiWorldPeople',  worldS);
 
-            renderRealestateChart([haksaS, sarangS, somangS, worldS]);
+            renderRealestateChart([haksaS, sarangS, pastorS, somangS, gradS, worldS]);
         }
 
         // 부동산 4종 비교 차트 (보증금 누계 기준)
@@ -5415,10 +5436,12 @@
             const el = document.getElementById('realestateChart');
             if (!el) return;
             const items = [
-                { key: '학사관',     icon: '🎓', color: '#5C6BC0', stats: stats[0] },
-                { key: '사랑의집',   icon: '❤️', color: '#EC407A', stats: stats[1] },
-                { key: '소망의집',   icon: '🌟', color: '#26A69A', stats: stats[2] },
-                { key: '월드하우스', icon: '🌍', color: '#FFB300', stats: stats[3] }
+                { key: '학사관',         icon: '🎓', color: '#5C6BC0', stats: stats[0] },
+                { key: '사랑의집',       icon: '❤️', color: '#EC407A', stats: stats[1] },
+                { key: '사역자지원',     icon: '📌', color: '#7E57C2', stats: stats[2] },
+                { key: '소망의집',       icon: '🌟', color: '#26A69A', stats: stats[3] },
+                { key: '사랑의집졸업',   icon: '🎓', color: '#1976D2', stats: stats[4] },
+                { key: '월드하우스',     icon: '🌍', color: '#FFB300', stats: stats[5] }
             ];
             const max = Math.max(1, ...items.map(i => i.stats.fund));
             let html = '<div style="display:grid;gap:12px;">';
